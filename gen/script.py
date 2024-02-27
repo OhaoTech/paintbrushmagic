@@ -58,12 +58,15 @@ def generate_image(prompt, style, size, quality):
     else:
         return None, "You have no prompts left."
 
-def surprise_me():
+def surprise_me(size, quality, session_state):
     # Randomly select a prompt and a style
     tmp_prompt = random.choice(random_prompt)
     tmp_style = random.choice(styles)
+
+    img, prompt_left_str = generate_image(tmp_prompt, tmp_style, size, quality)
+
     # Return the random prompt and style
-    return tmp_prompt, tmp_style
+    return tmp_prompt, tmp_style, img, prompt_left_str
 
 # Define the styles as seen in the screenshot
 styles = [   "Abstract Expressionism",   "Acrylic Painting",   "Art Deco",   "Baroque",   "Charcoal Drawing",   "Cubism",   "Engraving",   "Etching",   "Expressionism",   "Futurism",   "Gouache",   "Graffiti",   "Hyperrealism",   "Impressionism",   "Ink Drawing",   "Lithography",   "Lowbrow",   "Minimalism",   "Naive Art",   "Neoclassicism",   "No Style",   "Oil Painting",   "Op Art",   "Photorealism",   "Pixel Art",   "Pointillism",   "Pop Art",   "Realism",   "Renaissance",   "Screen Printing",   "Street Art",   "Surrealism",   "Trompe-l'oeil",   "Ukiyo-e",   "Watercolor",   "Watercolor Painting",   "Woodcut"]
@@ -111,8 +114,8 @@ with gr.Blocks() as demo:
     # Define the event handler for the "Surprise Me" button
     surprise_btn.click(
         fn=surprise_me,
-        inputs=[],
-        outputs=[prompt, style]
+        inputs=[size, quality, session_state],
+        outputs=[prompt, style, output_image, prompts_left]
     )
 
     # Logic to add more prompts when "Get more" is clicked
