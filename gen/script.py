@@ -18,8 +18,17 @@ dotenv.load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 random_prompt = prompt.read_prompt()
 
+def generate_prompt(prompt, negative_prompt, style):
+    if negative_prompt is None or negative_prompt == '':
+        pass
+    else:
+        prompt += "and I don't want {negative_prompt}"
+    if style != "No Style":
+        prompt += ", please draw the picture in {style} style"
 
-def generate_image(prompt, style, ratio, quality):
+    return prompt
+
+def generate_image(prompt, negative_prompt, style, ratio, quality):
     # Check the number of prompts left by making a request to the Flask backend
     response = requests.get('http://localhost:5000/get_prompts')
     if response.status_code != 200:
@@ -36,7 +45,7 @@ def generate_image(prompt, style, ratio, quality):
                 size = sizes[0]
 
             # Add the style to the prompt
-            full_prompt = f"{prompt}, draw it in {style} style"
+            full_prompt = generate_prompt(prompt, negative_prompt, style)
             # Call the OpenAI API
             response = client.images.generate(
                 model="dall-e-3",
@@ -100,8 +109,12 @@ def get_prompts_left():
 # Create the Gradio interface
 with gr.Blocks() as demo:
     gr.Markdown("<h1>Create your AI art</h1>")
+
     with gr.Row():
         prompt = gr.Textbox(placeholder="A bunny in a spacesuit", label="Describe your image")
+    with gr.Row():
+        negative_prompt = gr.Textbox(placeholder=" missing fingers, signature, watermark, username", label="Something you don't like (Optional)")
+    with gr.Row():
         style = gr.Dropdown(choices=styles, label="Select image style", value="No Style")
         ratio = gr.Dropdown(choices=ratios, label="Select image ratio", value="1:1")
         quality = gr.Dropdown(choices=qualities, label="Select image quality", value="standard")
@@ -117,13 +130,13 @@ with gr.Blocks() as demo:
     session_state = gr.State({})
 
     # Define the event handler for the generate button
-    def generate(prompt, style, size, quality, session_state):
-        img, message = generate_image(prompt, style, size, quality)
+    def generate(prompt, negative_prompt, style, size, quality, session_state):
+        img, message = generate_image(prompt, negative_prompt, style, size, quality)
         return img, message
 
     generate_btn.click(
-        fn=generate, 
-        inputs=[prompt, style, ratio, quality, session_state],
+        fn=generate,
+        inputs=[prompt, negative_prompt, style, ratio, quality, session_state],
         outputs=[output_image, prompts_left]
     )
     # Define the event handler for the "Surprise Me" button
