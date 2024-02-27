@@ -3,3 +3,4 @@ openai
 requests
 pillow
 python-dotenv
+flask
