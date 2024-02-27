@@ -11,7 +11,7 @@ def open_checkout():
 
 
 with gr.Blocks() as demo:
-    pay_btn = gr.Button("Pay", link= STRIPE_DOMAIN + "create-checkout-session")
+    pay_btn = gr.Button("Pay", link= STRIPE_DOMAIN + "/create-checkout-session")
     pay_btn.click(open_checkout)
 
 demo.launch(share=True)
