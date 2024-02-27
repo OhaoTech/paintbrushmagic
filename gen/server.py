@@ -60,5 +60,15 @@ def update_prompts():
 
     return jsonify({'status': 'success'})
 
+@app.route('/add_prompts', methods=['POST'])
+def add_prompts():
+    user_ip = request.remote_addr
+    conn = get_db_connection()
+    conn.execute('UPDATE user_prompts SET prompts_left = 5 WHERE ip_address = ?', (user_ip,))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'status': 'success'})
+
 if __name__ == '__main__':
     app.run(debug=True)

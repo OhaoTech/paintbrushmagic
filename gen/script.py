@@ -122,7 +122,11 @@ with gr.Blocks() as demo:
     def add_prompts(session_state):
         if 'session_id' in session_state:
             session_state[session_state['session_id']] = 5
-        return "You have 5 prompts left."
+        response = requests.post('http://localhost:5000/add_prompts')
+        if response.status_code == 200 and response.json()['status'] == 'success':
+            return "You have 5 prompts left."
+        else:
+            return "Error! Please try again!"
 
     get_more.click(
         fn=add_prompts,
