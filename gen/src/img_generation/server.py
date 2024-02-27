@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 import sqlite3
 import os
 import dotenv
-dotenv.load_dotenv() 
+dotenv.load_dotenv("../../.env") 
 
 prompt_free_times = os.getenv("PROMPT_FREE_TIMES")
 app = Flask(__name__)

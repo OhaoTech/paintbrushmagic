@@ -9,7 +9,7 @@ import os, dotenv
 from flask import Flask, redirect, request
 import stripe
 
-dotenv.load_dotenv()
+dotenv.load_dotenv("../../.env")
 # This is a public sample test API key.
 # Don’t submit any personally identifiable information in requests made with this key.
 # Sign in to see your own test API key embedded in code samples.

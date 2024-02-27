@@ -1,7 +1,7 @@
 import os, dotenv
 import gradio as gr
 
-dotenv.load_dotenv()
+dotenv.load_dotenv("../../.env")
 STRIPE_DOMAIN = os.getenv("STRIPE_DOMAIN")
 def open_checkout():
     return "Redirecting to checkout..."
