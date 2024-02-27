@@ -19,7 +19,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 random_prompt = prompt.read_prompt()
 
 
-def generate_image(prompt, style, size, quality):
+def generate_image(prompt, style, ratio, quality):
     # Check the number of prompts left by making a request to the Flask backend
     response = requests.get('http://localhost:5000/get_prompts')
     if response.status_code != 200:
@@ -28,6 +28,13 @@ def generate_image(prompt, style, size, quality):
     
     if num_prompts > 0:
         try:
+            if ratio == "1:1":
+                size = sizes[0]
+            elif ratio == "5:4":
+                size = sizes[2]
+            else:
+                size = sizes[0]
+
             # Add the style to the prompt
             full_prompt = f"{prompt}, draw it in {style} style"
             # Call the OpenAI API
@@ -43,6 +50,14 @@ def generate_image(prompt, style, size, quality):
             # Get the binary image data from the URL
             img_binary_data = requests.get(image_url).content
             img = Image.open(io.BytesIO(img_binary_data))
+
+            if ratio == "1:1":
+                pass
+            elif ratio == "5:4":
+                size = (1280, 1024)
+                img = img.resize(size)
+            else:
+                size = (256, 256)
             
             # After successfully generating an image, update the prompt count by sending a POST request
             update_response = requests.post('http://localhost:5000/update_prompts')
@@ -58,18 +73,19 @@ def generate_image(prompt, style, size, quality):
     else:
         return None, "You have no prompts left."
 
-def surprise_me(size, quality, session_state):
+def surprise_me(ratio, quality, session_state):
     # Randomly select a prompt and a style
     tmp_prompt = random.choice(random_prompt)
     tmp_style = random.choice(styles)
 
-    img, prompt_left_str = generate_image(tmp_prompt, tmp_style, size, quality)
+    img, prompt_left_str = generate_image(tmp_prompt, tmp_style, ratio, quality)
 
     # Return the random prompt and style
     return tmp_prompt, tmp_style, img, prompt_left_str
 
 # Define the styles as seen in the screenshot
 styles = [   "Abstract Expressionism",   "Acrylic Painting",   "Art Deco",   "Baroque",   "Charcoal Drawing",   "Cubism",   "Engraving",   "Etching",   "Expressionism",   "Futurism",   "Gouache",   "Graffiti",   "Hyperrealism",   "Impressionism",   "Ink Drawing",   "Lithography",   "Lowbrow",   "Minimalism",   "Naive Art",   "Neoclassicism",   "No Style",   "Oil Painting",   "Op Art",   "Photorealism",   "Pixel Art",   "Pointillism",   "Pop Art",   "Realism",   "Renaissance",   "Screen Printing",   "Street Art",   "Surrealism",   "Trompe-l'oeil",   "Ukiyo-e",   "Watercolor",   "Watercolor Painting",   "Woodcut"]
+ratios = ["1:1", "5:4"]
 sizes = ["1024x1024", "1024x1792", "1792x1024"]
 qualities = ["standard", "hd"]
 
@@ -87,7 +103,7 @@ with gr.Blocks() as demo:
     with gr.Row():
         prompt = gr.Textbox(placeholder="A bunny in a spacesuit", label="Describe your image")
         style = gr.Dropdown(choices=styles, label="Select image style", value="No Style")
-        size = gr.Dropdown(choices=sizes, label="Select image size", value="1024x1024")
+        ratio = gr.Dropdown(choices=ratios, label="Select image ratio", value="1:1")
         quality = gr.Dropdown(choices=qualities, label="Select image quality", value="standard")
     with gr.Row():
         generate_btn = gr.Button("Generate")
@@ -103,18 +119,17 @@ with gr.Blocks() as demo:
     # Define the event handler for the generate button
     def generate(prompt, style, size, quality, session_state):
         img, message = generate_image(prompt, style, size, quality)
-        prompts_left.update(get_prompts_left())  # Update the prompts left label
         return img, message
 
     generate_btn.click(
         fn=generate, 
-        inputs=[prompt, style, size, quality, session_state], 
+        inputs=[prompt, style, ratio, quality, session_state],
         outputs=[output_image, prompts_left]
     )
     # Define the event handler for the "Surprise Me" button
     surprise_btn.click(
         fn=surprise_me,
-        inputs=[size, quality, session_state],
+        inputs=[ratio, quality, session_state],
         outputs=[prompt, style, output_image, prompts_left]
     )
 
