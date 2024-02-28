@@ -9,16 +9,30 @@ import requests
 import io, os
 import dotenv
 from PIL import Image
-import uuid
 import random
 import prompt
+import network
 
 # Load the environment variables from the .env file
 dotenv.load_dotenv()
+IMAGE_SERVER_DOMAIN = os.getenv('IMAGE_SERVER_DOMAIN')
 
 # Initialize OpenAI client with your API key
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 random_prompt = prompt.read_prompt()
+
+# variants about image generation
+styles = ["Abstract Expressionism",   "Acrylic Painting",   "Art Deco",   "Baroque",   "Charcoal Drawing",   "Cubism",   "Engraving",   "Etching",   "Expressionism",   "Futurism",   "Gouache",   "Graffiti",   "Hyperrealism",   "Impressionism",   "Ink Drawing",   "Lithography",   "Lowbrow",   "Minimalism",   "Naive Art",   "Neoclassicism",   "No Style",   "Oil Painting",   "Op Art",   "Photorealism",   "Pixel Art",   "Pointillism",   "Pop Art",   "Realism",   "Renaissance",   "Screen Printing",   "Street Art",   "Surrealism",   "Trompe-l'oeil",   "Ukiyo-e",   "Watercolor",   "Watercolor Painting",   "Woodcut"]
+ratios = ["1:1", "4:7", "7:4"]
+sizes = ["1024x1024", "1024x1792", "1792x1024"]
+qualities = ["standard", "hd"]
+
+# variants about order generation
+kind_list = ['clothe', 'canvas', 'post']
+clothe_size = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
+canvas_size = ['20x25', '30x40', '40x50', '60x80']
+post_size = ['A1', 'A2', 'A3']
+color_list = ['white', 'red', 'green', 'blue', 'black']
 
 def generate_prompt(prompt, negative_prompt, style):
     if negative_prompt is None or negative_prompt == '':
@@ -104,12 +118,6 @@ def surprise_me():
     # Return the random prompt and style
     return tmp_prompt, tmp_style
 
-# Define the styles as seen in the screenshot
-styles = [   "Abstract Expressionism",   "Acrylic Painting",   "Art Deco",   "Baroque",   "Charcoal Drawing",   "Cubism",   "Engraving",   "Etching",   "Expressionism",   "Futurism",   "Gouache",   "Graffiti",   "Hyperrealism",   "Impressionism",   "Ink Drawing",   "Lithography",   "Lowbrow",   "Minimalism",   "Naive Art",   "Neoclassicism",   "No Style",   "Oil Painting",   "Op Art",   "Photorealism",   "Pixel Art",   "Pointillism",   "Pop Art",   "Realism",   "Renaissance",   "Screen Printing",   "Street Art",   "Surrealism",   "Trompe-l'oeil",   "Ukiyo-e",   "Watercolor",   "Watercolor Painting",   "Woodcut"]
-ratios = ["1:1", "4:7", "7:4"]
-sizes = ["1024x1024", "1024x1792", "1792x1024"]
-qualities = ["standard", "hd"]
-
 # Helper function to get the current number of prompts left from the backend
 def get_prompts_left():
     response = requests.get('http://localhost:5000/get_prompts')
@@ -117,6 +125,44 @@ def get_prompts_left():
         return f"You have {response.json()['prompts_left']} prompts left."
     else:
         return "Error retrieving prompt count"
+
+# Define the event handler for the generate button
+def generate(prompt, negative_prompt, style, size, quality, session_state):
+    img, message, image_url = generate_image(prompt, negative_prompt, style, size, quality)
+    return img, message, image_url
+
+# jump to the render page
+def jump_render_page(image_url):
+    # TODO: pass the image url to the display page
+    param = {'image_url': image_url}
+    webbrowser.open("http://127.0.0.1:5500/gen/GL/index.html")
+
+# change display to order
+def change_to_order_display():
+    return gr.Textbox(visible=False), gr.Textbox(visible=False), gr.Dropdown(visible=False), gr.Dropdown(visible=False), gr.Dropdown(visible=False), gr.Button(visible=False), gr.Button(visible=False), gr.Button(visible=False), gr.Button(visible=False), gr.Label(visible=False), gr.Button(visible=False), gr.Dropdown(visible=True), gr.Dropdown(visible=True), gr.Dropdown(visible=True), gr.Textbox(visible=True), gr.Button(visible=True), gr.Button(visible=True)
+
+# change display to image generation
+def change_to_generation_display():
+    return gr.Textbox(visible=True), gr.Textbox(visible=True), gr.Dropdown(visible=True), gr.Dropdown(visible=True), gr.Dropdown(visible=True), gr.Button(visible=True), gr.Button(visible=True), gr.Button(visible=True), gr.Button(visible=True), gr.Label(visible=True), gr.Button(visible=True), gr.Dropdown(visible=False), gr.Dropdown(visible=False), gr.Dropdown(visible=False), gr.Textbox(visible=False), gr.Button(visible=False), gr.Button(visible=False)
+
+# Logic to add more prompts when "Get more" is clicked
+def add_prompts(session_state):
+    if 'session_id' in session_state:
+        session_state[session_state['session_id']] = 5
+    response = requests.post('http://localhost:5000/add_prompts')
+    if response.status_code == 200 and response.json()['status'] == 'success':
+        return "You have 5 prompts left."
+    else:
+        return "Error! Please try again!"
+
+def change_size_dropdown(kind):
+    if kind == 'clothe':
+        return gr.Dropdown(label="Size", choices=clothe_size, value='M'), gr.Dropdown(interactive=True, visible=True)
+    elif kind == 'canvas':
+        return gr.Dropdown(label="Size(cm)", choices=canvas_size, value=canvas_size[0], interactive=True), gr.Dropdown(visible=False)
+    elif kind == 'post':
+        return gr.Dropdown(label="Size", choices=post_size, value=post_size[0], interactive=True), gr.Dropdown(visible=False)
+
 
 # Create the Gradio interface
 with gr.Blocks() as demo:
@@ -135,19 +181,25 @@ with gr.Blocks() as demo:
         surprise_btn = gr.Button("Surprise me", icon="./public/🎁.png")
     output_image = gr.Image(label="Your AI Generated Art")
     with gr.Row():
-        image_url = gr.Textbox(label="Image url", visible=False)
-        show_bt = gr.Button("Show it!")
+        image_url = gr.Textbox("https://oaidalleapiprodscus.blob.core.windows.net/private/org-sEbC9g0SYxi1GqsvDqWMNi6l/user-fmy5WrRtRPgJvvPdrS8CBJnC/img-ImftP3jWw50x0XabV3eLAEBI.png?st=2024-02-28T03%3A04%3A35Z&se=2024-02-28T05%3A04%3A35Z&sp=r&sv=2021-08-06&sr=b&rscd=inline&rsct=image/png&skoid=6aaadede-4fb3-4698-a8f6-684d7786b067&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2024-02-28T01%3A01%3A05Z&ske=2024-02-29T01%3A01%3A05Z&sks=b&skv=2021-08-06&sig=MxWKeBG54ok4OryjBVPIjCablO%2BmB6RvpikONUyhSm8%3D", label="Image url", visible=False)
+        show_btn = gr.Button("Show it!")
+        buy_btn = gr.Button("Buy it!")
     prompts_left = gr.Label(get_prompts_left())
     get_more = gr.Button("Get more")
     generated_prompt = gr.Textbox(label="Generated prompt", visible=False)
     generated_style = gr.Textbox(label="Generated style", visible=False)
 
-    session_state = gr.State({})
+    with gr.Row():
+        kind = gr.Dropdown(label="What kind of things you want to buy", choices=kind_list, value='clothe', interactive=True, visible=False)
+        size = gr.Dropdown(label="Size", choices=clothe_size, value='M', interactive=True, visible=False)
+        color = gr.Dropdown(label="Clothe Color", choices=color_list, value=color_list[0], interactive=True, visible=False)
+    with gr.Row():
+        address = gr.Textbox(label="Your address", placeholder="somewhere you want to receive the package", interactive=True, visible=False)
+    with gr.Row():
+        back_btn = gr.Button("Back to generation page", visible=False)
+        pay_btn = gr.Button("Pay it!", visible=False)
 
-    # Define the event handler for the generate button
-    def generate(prompt, negative_prompt, style, size, quality, session_state):
-        img, message, image_url = generate_image(prompt, negative_prompt, style, size, quality)
-        return img, message, image_url
+    session_state = gr.State({})
 
     generate_btn.click(
         fn=generate,
@@ -161,32 +213,34 @@ with gr.Blocks() as demo:
         outputs=[prompt, style]
     )
 
-    def show_rendered_cloth(image_url):
-        # TODO: pass the image url to the display page
-        param = {'image_url': image_url}
-        webbrowser.open("http://127.0.0.1:5500/gen/GL/index.html")
-
-    show_bt.click(
-        fn=show_rendered_cloth,
+    show_btn.click(
+        fn=jump_render_page,
         inputs=[image_url],
         outputs=[]
     )
 
-    # Logic to add more prompts when "Get more" is clicked
-    def add_prompts(session_state):
-        if 'session_id' in session_state:
-            session_state[session_state['session_id']] = 5
-        response = requests.post('http://localhost:5000/add_prompts')
-        if response.status_code == 200 and response.json()['status'] == 'success':
-            return "You have 5 prompts left."
-        else:
-            return "Error! Please try again!"
+    buy_btn.click(
+        fn=change_to_order_display,
+        inputs=[],
+        outputs=[prompt, negative_prompt, style, ratio, quality, generate_btn, surprise_btn, show_btn, buy_btn, prompts_left, get_more, kind, size, color, address, pay_btn, back_btn]
+    )
+
+    back_btn.click(
+        fn=change_to_generation_display,
+        inputs=[],
+        outputs=[prompt, negative_prompt, style, ratio, quality, generate_btn, surprise_btn, show_btn, buy_btn, prompts_left, get_more, kind, size, color, address, pay_btn, back_btn]
+    )
 
     get_more.click(
         fn=add_prompts,
         inputs=[session_state],
         outputs=prompts_left
     )
+    kind.change(
+        fn=change_size_dropdown,
+        inputs=[kind],
+        outputs=[size, color]
+    )
 
 # Launch the Gradio interface
-demo.launch(share=True)
+demo.launch(share=True, server_port=7860)
