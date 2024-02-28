@@ -110,6 +110,7 @@ with gr.Blocks() as demo:
     with gr.Row():
         prompt = gr.Textbox(placeholder="A bunny in a spacesuit", label="Describe your image")
     with gr.Row():
+        negative_prompt = gr.Textbox(placeholder="unwanted themes or characteristics", label="Something you don't like (Optional)")
     with gr.Row():
         style = gr.Dropdown(choices=styles, label="Select image style", value="No Style")
         ratio = gr.Dropdown(choices=ratios, label="Select image ratio", value="1:1")
