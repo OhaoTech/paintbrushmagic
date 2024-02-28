@@ -1,17 +1,23 @@
-from flask import Flask, request, jsonify
+import stripe
+from flask import Flask, request, jsonify, redirect
 import sqlite3
 import os
 import dotenv
-dotenv.load_dotenv("../../.env") 
+dotenv.load_dotenv("../../.env")
 
 prompt_free_times = os.getenv("PROMPT_FREE_TIMES")
+FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY")
+IMAGE_SERVER_DOMAIN = os.getenv("IMAGE_SERVER_DOMAIN")
+
 app = Flask(__name__,
             static_url_path='',
             static_folder='public')
+app.secret_key = FLASK_SECRET_KEY
 
 # Database setup
 PROMPT_DATABASE_FILE = 'user_prompts.db'
 IMAGE_URL_DATABASE_FILE = 'image_url.db'
+ORDER_DATABASE_FILE = 'orders.db'
 
 def get_db_connection(database_file):
     conn = sqlite3.connect(database_file)
@@ -22,6 +28,9 @@ def get_image_db_connection():
 
 def get_prompt_db_connection():
     return get_db_connection(PROMPT_DATABASE_FILE)
+
+def get_order_db_connection():
+    return get_db_connection(ORDER_DATABASE_FILE)
 
 def init_db():
     # create user remaining prompts database
@@ -46,6 +55,38 @@ def init_db():
                 ratio TEXT NOT NULL
             )
         """)
+    conn.commit()
+    conn.close()
+    # create order database
+    conn = get_order_db_connection()
+    conn.execute("""
+            CREATE TABLE IF NOT EXISTS clothe_order (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                image_url TEXT NOT NULL,
+                color TEXT NOT NULL,
+                size TEXT NOT NULL,
+                address TEXT NOT NULL,
+                payment_status INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+    conn.execute("""
+                CREATE TABLE IF NOT EXISTS canvas_order (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    image_url TEXT NOT NULL,
+                    size TEXT NOT NULL,
+                    address TEXT NOT NULL,
+                    payment_status INTEGER NOT NULL DEFAULT 0
+                )
+            """)
+    conn.execute("""
+                CREATE TABLE IF NOT EXISTS post_order (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    image_url TEXT NOT NULL,
+                    size TEXT NOT NULL,
+                    address TEXT NOT NULL,
+                    payment_status INTEGER NOT NULL DEFAULT 0
+                )
+            """)
     conn.commit()
     conn.close()
 
@@ -111,5 +152,158 @@ def add_prompts():
 
     return jsonify({'status': 'success'})
 
+@app.route('/create_clothe_order', methods=['POST'])
+def create_clothe_order():
+    data = request.get_json()
+    image_url = data['image_url']
+    color = data['color']
+    size = data['size']
+    conn = get_db_connection()
+    conn.execute('INSERT INTO clothe_order (image_url, color, size) VALUES (?, ?, ?)', (image_url, color, size))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'status': 'success'})
+
+@app.route('/select_clothe_order', methods=['POST'])
+def select_order():
+    data = request.get_json()
+    order_id = data['id']
+    conn = get_db_connection()
+    order = conn.execute('SELECT image_url, color, size, payment_status FROM clothe_order WHERE id = ?', (order_id,)).fetchone()
+    conn.close()
+
+    if order is None:
+        # TODO: if order doesn't exist
+        pass
+    else:
+        image_url, color, size, payment_status = order
+        return jsonify({"status": "success", "image_url": image_url, "color": color, "size": size, "payment_status": payment_status})
+
+@app.route('/update_clothe_order_payment_status', methods=['POST'])
+def update_clothe_order_payment_status():
+    data = request.get_json()
+    order_id = data['id']
+    payment_status = data['payment_status']
+    conn = get_db_connection()
+    conn.execute('UPDATE clothe_order SET payment_status = ? WHERE id = ?', (payment_status, order_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "success"})
+
+def generate_post_checkout_item(name, size, address, currency='usd', price=999, quantity=1):
+    item = {
+        'price_data': {
+            'currency': currency,
+            'product_data': {
+                'name': name,
+                'size': size,
+                'address': address
+            },
+            'unit_amount': price,
+        },
+        'quantity': quantity,
+    }
+    return item
+def generate_canvas_checkout_item(name, size, address, currency='usd', price=999, quantity=1):
+    item = {
+        'price_data': {
+            'currency': currency,
+            'product_data': {
+                'name': name,
+                'size': size,
+                'address': address
+            },
+            'unit_amount': price,
+        },
+        'quantity': quantity,
+    }
+    return item
+def generate_clothe_checkout_item(name, color, size, address, quantity=1, currency='usd', price=999):
+    item = {
+        'price_data': {
+            'currency': currency,
+            'product_data': {
+                'name': name,
+                'color': color,
+                'size': size,
+                'address': address
+            },
+            'unit_amount': price,
+        },
+        'quantity': quantity,
+    }
+    return item
+
+@app.route('/create-clothe-checkout-session', methods=['GET'])
+def create_clothe_checkout_session():
+    try:
+        data = request.get_json()
+        name = data['name']
+        color = data['color']
+        size = data['size']
+        address = data['address']
+        quantity = data['quantity']
+
+        items = []
+        items.append(generate_clothe_checkout_item(name=name, color=color, size=size, address=address, quantity=quantity))
+
+        checkout_session = stripe.checkout.Session.create(
+            line_items=items,
+            mode='payment',
+            success_url=IMAGE_SERVER_DOMAIN + '/success.html',
+            cancel_url=IMAGE_SERVER_DOMAIN + '/cancel.html',
+        )
+    except Exception as e:
+        return str(e)
+
+    return redirect(checkout_session.url, code=303)
+
+@app.route('/create-canvas-checkout-session', methods=['GET'])
+def create_canvas_checkout_session():
+    try:
+        data = request.get_json()
+        name = data['name']
+        size = data['size']
+        address = data['address']
+        quantity = data['quantity']
+
+        items = []
+        items.append(generate_canvas_checkout_item(name=name, size=size, address=address, quantity=quantity))
+
+        checkout_session = stripe.checkout.Session.create(
+            line_items=items,
+            mode='payment',
+            success_url=IMAGE_SERVER_DOMAIN + '/success.html',
+            cancel_url=IMAGE_SERVER_DOMAIN + '/cancel.html',
+        )
+    except Exception as e:
+        return str(e)
+
+    return redirect(checkout_session.url, code=303)
+
+@app.route('/create-post-checkout-session', methods=['GET'])
+def create_post_checkout_session():
+    try:
+        data = request.get_json()
+        name = data['name']
+        size = data['size']
+        address = data['address']
+        quantity = data['quantity']
+
+        items = []
+        items.append(generate_canvas_checkout_item(name=name, size=size, address=address, quantity=quantity))
+
+        checkout_session = stripe.checkout.Session.create(
+            line_items=items,
+            mode='payment',
+            success_url=IMAGE_SERVER_DOMAIN + '/success.html',
+            cancel_url=IMAGE_SERVER_DOMAIN + '/cancel.html',
+        )
+    except Exception as e:
+        return str(e)
+
+    return redirect(checkout_session.url, code=303)
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5000)
