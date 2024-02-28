@@ -1,3 +1,5 @@
+import webbrowser
+
 import gradio as gr
 from openai import OpenAI
 # openai error handling
@@ -134,6 +136,9 @@ with gr.Blocks() as demo:
         generate_btn = gr.Button("Generate")
         surprise_btn = gr.Button("Surprise me", icon="./public/🎁.png")
     output_image = gr.Image(label="Your AI Generated Art")
+    with gr.Row():
+        image_url = gr.Textbox(label="Image url", visible=False)
+        show_bt = gr.Button("Show it!")
     prompts_left = gr.Label(get_prompts_left())
     get_more = gr.Button("Get more")
     generated_prompt = gr.Textbox(label="Generated prompt", visible=False)
@@ -143,19 +148,30 @@ with gr.Blocks() as demo:
 
     # Define the event handler for the generate button
     def generate(prompt, negative_prompt, style, size, quality, session_state):
-        img, message = generate_image(prompt, negative_prompt, style, size, quality)
-        return img, message
+        img, message, image_url = generate_image(prompt, negative_prompt, style, size, quality)
+        return img, message, image_url
 
     generate_btn.click(
         fn=generate,
         inputs=[prompt, negative_prompt, style, ratio, quality, session_state],
-        outputs=[output_image, prompts_left]
+        outputs=[output_image, prompts_left, image_url]
     )
     # Define the event handler for the "Surprise Me" button
     surprise_btn.click(
         fn=surprise_me,
         inputs=[],
         outputs=[prompt, style]
+    )
+
+    def show_rendered_cloth(image_url):
+        # TODO: pass the image url to the display page
+        param = {'image_url': image_url}
+        webbrowser.open("http://127.0.0.1:5500/gen/GL/index.html")
+
+    show_bt.click(
+        fn=show_rendered_cloth,
+        inputs=[image_url],
+        outputs=[]
     )
 
     # Logic to add more prompts when "Get more" is clicked
