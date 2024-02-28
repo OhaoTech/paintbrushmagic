@@ -9,6 +9,8 @@ prompt_free_times = os.getenv("PROMPT_FREE_TIMES")
 FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY")
 IMAGE_SERVER_DOMAIN = os.getenv("IMAGE_SERVER_DOMAIN")
 
+stripe.api_key = os.getenv("STRIPE_API_KEY")
+
 app = Flask(__name__,
             static_url_path='',
             static_folder='public')
