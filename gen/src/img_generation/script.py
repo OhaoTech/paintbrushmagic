@@ -30,6 +30,22 @@ def generate_prompt(prompt, negative_prompt, style):
 
     return prompt
 
+def record_image_and_prompt(prompt, image_url, style, ratio):
+    param = {
+        'url': image_url,
+        'prompt': prompt,
+        'style': style,
+        'ratio': ratio
+    }
+
+    response = requests.post('http://localhost:5000/add_image_record', json=param)
+    if response.status_code != 200:
+        # TODO: when image generation record save failed
+        pass
+    else:
+        # TODO: when image generation record save successfully
+        pass
+
 def generate_image(prompt, negative_prompt, style, ratio, quality):
     # Check the number of prompts left by making a request to the Flask backend
     response = requests.get('http://localhost:5000/get_prompts')
@@ -41,10 +57,12 @@ def generate_image(prompt, negative_prompt, style, ratio, quality):
         try:
             if ratio == "1:1":
                 size = sizes[0]
-            elif ratio == "5:4":
+            elif ratio == "4:7":
+                size = sizes[1]
+            elif ratio == "7:4":
                 size = sizes[2]
             else:
-                size = sizes[0]
+                return None, "Wrong ratio", ""
 
             # Add the style to the prompt
             full_prompt = generate_prompt(prompt, negative_prompt, style)
@@ -62,28 +80,8 @@ def generate_image(prompt, negative_prompt, style, ratio, quality):
             img_binary_data = requests.get(image_url).content
             img = Image.open(io.BytesIO(img_binary_data))
 
-            param = {
-                'url': image_url,
-                'prompt': full_prompt,
-                'style': style,
-                'ratio': ratio
-            }
-
-            response = requests.post('http://localhost:5000/add_image_record', json=param)
-            if response.status_code != 200:
-                # TODO: when image generation record save failed
-                pass
-            else:
-                # TODO: when image generation record save successfully
-                pass
-
-            if ratio == "1:1":
-                pass
-            elif ratio == "5:4":
-                size = (1280, 1024)
-                img = img.resize(size)
-            else:
-                size = (256, 256)
+            # Record image url and prompt
+            record_image_and_prompt(full_prompt, image_url, style, ratio)
             
             # After successfully generating an image, update the prompt count by sending a POST request
             update_response = requests.post('http://localhost:5000/update_prompts')
@@ -108,7 +106,7 @@ def surprise_me():
 
 # Define the styles as seen in the screenshot
 styles = [   "Abstract Expressionism",   "Acrylic Painting",   "Art Deco",   "Baroque",   "Charcoal Drawing",   "Cubism",   "Engraving",   "Etching",   "Expressionism",   "Futurism",   "Gouache",   "Graffiti",   "Hyperrealism",   "Impressionism",   "Ink Drawing",   "Lithography",   "Lowbrow",   "Minimalism",   "Naive Art",   "Neoclassicism",   "No Style",   "Oil Painting",   "Op Art",   "Photorealism",   "Pixel Art",   "Pointillism",   "Pop Art",   "Realism",   "Renaissance",   "Screen Printing",   "Street Art",   "Surrealism",   "Trompe-l'oeil",   "Ukiyo-e",   "Watercolor",   "Watercolor Painting",   "Woodcut"]
-ratios = ["1:1", "5:4"]
+ratios = ["1:1", "4:7", "7:4"]
 sizes = ["1024x1024", "1024x1792", "1792x1024"]
 qualities = ["standard", "hd"]
 
