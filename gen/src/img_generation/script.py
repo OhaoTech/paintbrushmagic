@@ -60,6 +60,21 @@ def generate_image(prompt, negative_prompt, style, ratio, quality):
             img_binary_data = requests.get(image_url).content
             img = Image.open(io.BytesIO(img_binary_data))
 
+            param = {
+                'url': image_url,
+                'prompt': full_prompt,
+                'style': style,
+                'ratio': ratio
+            }
+
+            response = requests.post('http://localhost:5000/add_image_record', json=param)
+            if response.status_code != 200:
+                # TODO: when image generation record save failed
+                pass
+            else:
+                # TODO: when image generation record save successfully
+                pass
+
             if ratio == "1:1":
                 pass
             elif ratio == "5:4":
@@ -73,14 +88,14 @@ def generate_image(prompt, negative_prompt, style, ratio, quality):
             if update_response.status_code == 200:
                 num_prompts -= 1  # Decrement the prompt count after the update
             else:
-                return None, "Error updating prompt count."
+                return None, "Error updating prompt count.", ""
 
-            return img, f"You have {num_prompts} prompts left"
+            return img, f"You have {num_prompts} prompts left", image_url
         
         except Exception as e:
-            return None, f"An error occurred: {e}"
+            return None, f"An error occurred: {e}", ""
     else:
-        return None, "You have no prompts left."
+        return None, "You have no prompts left.", ""
 
 def surprise_me():
     # Randomly select a prompt and a style
