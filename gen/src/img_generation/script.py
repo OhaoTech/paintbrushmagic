@@ -14,7 +14,7 @@ import random
 import prompt
 
 # Load the environment variables from the .env file
-dotenv.load_dotenv()
+dotenv.load_dotenv("../../.env")
 
 # Initialize OpenAI client with your API key
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -164,7 +164,7 @@ with gr.Blocks() as demo:
     def show_rendered_cloth(image_url):
         # TODO: pass the image url to the display page
         param = {'image_url': image_url}
-        webbrowser.open("http://127.0.0.1:5500/gen/GL/index.html")
+        webbrowser.open("http://127.0.0.1:5500/GL/index.html")
 
     show_bt.click(
         fn=show_rendered_cloth,
