@@ -110,14 +110,13 @@ with gr.Blocks() as demo:
     with gr.Row():
         prompt = gr.Textbox(placeholder="A bunny in a spacesuit", label="Describe your image")
     with gr.Row():
-        negative_prompt = gr.Textbox(placeholder=" missing fingers, signature, watermark, username", label="Something you don't like (Optional)")
     with gr.Row():
         style = gr.Dropdown(choices=styles, label="Select image style", value="No Style")
         ratio = gr.Dropdown(choices=ratios, label="Select image ratio", value="1:1")
         quality = gr.Dropdown(choices=qualities, label="Select image quality", value="standard")
     with gr.Row():
         generate_btn = gr.Button("Generate")
-        surprise_btn = gr.Button("Surprise me", icon="🎁.png")
+        surprise_btn = gr.Button("Surprise me", icon="./public/🎁.png")
     output_image = gr.Image(label="Your AI Generated Art")
     prompts_left = gr.Label(get_prompts_left())
     get_more = gr.Button("Get more")

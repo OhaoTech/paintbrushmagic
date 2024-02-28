@@ -5,7 +5,9 @@ import dotenv
 dotenv.load_dotenv("../../.env") 
 
 prompt_free_times = os.getenv("PROMPT_FREE_TIMES")
-app = Flask(__name__)
+app = Flask(__name__,
+            static_url_path='',
+            static_folder='public')
 
 # Database setup
 DATABASE_FILE = 'user_prompts.db'
