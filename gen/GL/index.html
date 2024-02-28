@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Hoodie Texture Application</title>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+    </style>
+	<script type="importmap">
+		{
+		  "imports": {
+			"three": "https://unpkg.com/three@0.160.1/build/three.module.js",
+			"three/addons/": "https://unpkg.com/three@0.160.1/examples/jsm/"
+		  }
+		  
+		}
+	  </script>
+</head>
+<body>
+    <input type="file" id="fileInput" accept="image/*" style="position: absolute; z-index: 1;">
+
+    <!-- <script src="https://threejs.org/build/three.js"></script> -->
+    <!-- <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script> -->
+    <!-- <script src="https://threejs.org/examples/js/loaders/GLTFLoader.js"></script> -->
+    <script  type="module"  src="app.js"></script> <!-- Link to your external JS file here -->
+</body>
+</html>
