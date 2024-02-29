@@ -16,6 +16,7 @@ import network
 # Load the environment variables from the .env file
 dotenv.load_dotenv()
 IMAGE_SERVER_DOMAIN = os.getenv('IMAGE_SERVER_DOMAIN')
+RENDER_SERVER_DOMAIN = os.getenv('RENDER_SERVER_DOMAIN')
 
 # Initialize OpenAI client with your API key
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -147,7 +148,8 @@ def generate(prompt, negative_prompt, style, size, quality, session_state):
 def jump_render_page(image_url):
     # TODO: pass the image url to the display page
     param = {'image_url': image_url}
-    webbrowser.open("http://127.0.0.1:5500") #running under express js server
+    # running under express js server
+    network.jump(RENDER_SERVER_DOMAIN, param=param, method='get')
 
 
 # change display to order
