@@ -158,7 +158,7 @@ def change_to_order_display():
         visible=False), gr.Dropdown(visible=False), gr.Button(visible=False), gr.Button(visible=False), gr.Button(
         visible=False), gr.Button(visible=False), gr.Label(visible=False), gr.Button(visible=False), gr.Dropdown(
         visible=True), gr.Dropdown(visible=True), gr.Dropdown(visible=True), gr.Textbox(visible=True), gr.Button(
-        visible=True), gr.Button(visible=True), gr.Number(visible=True)
+        visible=True), gr.Button(visible=True), gr.Number(visible=True), gr.Markdown(visible=False), gr.Markdown(visible=True)
 
 
 # change display to image generation
@@ -167,7 +167,7 @@ def change_to_generation_display():
         visible=True), gr.Dropdown(visible=True), gr.Button(visible=True), gr.Button(visible=True), gr.Button(
         visible=True), gr.Button(visible=True), gr.Label(visible=True), gr.Button(visible=True), gr.Dropdown(
         visible=False), gr.Dropdown(visible=False), gr.Dropdown(visible=False), gr.Textbox(visible=False), gr.Button(
-        visible=False), gr.Button(visible=False), gr.Number(visible=False)
+        visible=False), gr.Button(visible=False), gr.Number(visible=False), gr.Markdown(visible=True), gr.Markdown(visible=False)
 
 
 # Logic to add more prompts when "Get more" is clicked
@@ -194,7 +194,8 @@ def change_size_dropdown(kind):
 
 # Create the Gradio interface
 with gr.Blocks() as demo:
-    gr.Markdown("<h1>Create your AI art</h1>")
+    generation_title = gr.Markdown("<h1>Create your AI art</h1>", visible=True)
+    order_title = gr.Markdown("<h1>Check your order</h1>", visible=False)
 
     with gr.Row():
         prompt = gr.Textbox(placeholder="A bunny in a spacesuit", label="Describe your image")
@@ -258,14 +259,14 @@ with gr.Blocks() as demo:
         fn=change_to_order_display,
         inputs=[],
         outputs=[prompt, negative_prompt, style, ratio, quality, generate_btn, surprise_btn, show_btn, buy_btn,
-                 prompts_left, get_more, kind, size, color, address, pay_btn, back_btn, quantity]
+                 prompts_left, get_more, kind, size, color, address, pay_btn, back_btn, quantity, generation_title, order_title]
     )
 
     back_btn.click(
         fn=change_to_generation_display,
         inputs=[],
         outputs=[prompt, negative_prompt, style, ratio, quality, generate_btn, surprise_btn, show_btn, buy_btn,
-                 prompts_left, get_more, kind, size, color, address, pay_btn, back_btn, quantity]
+                 prompts_left, get_more, kind, size, color, address, pay_btn, back_btn, quantity, generation_title, order_title]
     )
 
     get_more.click(
