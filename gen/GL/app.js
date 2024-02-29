@@ -25,42 +25,77 @@ document.body.appendChild(renderer.domElement);
 // clear color as light gray
 renderer.setClearColor(0xdddddd);
 
-// Load the model
+// Add event listeners for buttons
+document.getElementById('btnCanvas').addEventListener('click', () => toggleModel('canvas'));
+document.getElementById('btnPoster').addEventListener('click', () => toggleModel('poster'));
+document.getElementById('btnHoodie').addEventListener('click', () => toggleModel('hoodie'));
 
-let hoodieMaterial;
+
+
+
+// Load 3 models: canvas, poster, and hoodie
+const modelPaths = {
+	'canvas': 'canvas/canvas.gltf',
+	'poster': 'poster/poster.gltf',
+	'hoodie': 'hoodie/chest.gltf'
+};
+const models = {};
+
+let canvasMaterial, posterMaterial, hoodieMaterial;
 let pendingTexture = null;
 
 //current path
 const loader = new GLTFLoader().setPath('./');
-loader.load('chest.gltf', function (gltf) {
-	let materialFound = false;
-    gltf.scene.traverse(function (child) {
-        if (child.isMesh && child.name === "chest") {
-			materialFound = true;
-			console.log(`Material found for mesh ${child.name}`, hoodieMaterial);
+function loadModel(modelName, path) {
+	loader.load(path, function(gltf) {
+		models[modelName] = gltf.scene;
+		models[modelName].visible = false;
+		if(modelName === 'canvas'){
+			models['canvas'].visible = true;
+		}
+		scene.add(gltf.scene);
 
-            // Save the material for later use
-            hoodieMaterial = child.material;
-			// console.log("Material found:", hoodieMaterial);
-			if(pendingTexture){
-				hoodieMaterial.map = pendingTexture;
-				hoodieMaterial.needsUpdate = true;
-				pendingTexture = null;
+		gltf.scene.position.set(0, 0, -1);
+		gltf.scene.rotation.set(0,  - Math.PI / 2, 0);
+		gltf.scene.traverse(function(child) {
+			//mesh name is "Plane", "Chest" or "poster_mesh" simultaneously
+			if(child.isMesh && child.name === "Plane"){
+				canvasMaterial = child.material;
+				if(pendingTexture){
+					canvasMaterial.map = pendingTexture;
+					canvasMaterial.needsUpdate = true;
+					pendingTexture = null;
+				}
 			}
-			return;
-        }
-    });
-	//move the model to the center
-	gltf.scene.position.set(0, 0, 0);
-	//rotate along Z axis 90 degrees clockwise
-	gltf.scene.rotation.set(0,  - Math.PI / 2, 0);
-    scene.add(gltf.scene);
-	if(!materialFound){
-		console.error("Material not found in the model");
-	}
-}, undefined, function (error) {
-    console.error(error);
-});
+
+			if(child.isMesh && child.name === "poster_mesh"){
+				posterMaterial = child.material;
+				if(pendingTexture){
+					posterMaterial.map = pendingTexture;
+					posterMaterial.needsUpdate = true;
+					pendingTexture = null;
+				}
+			}
+
+			if(child.isMesh && child.name === "chest"){
+				hoodieMaterial = child.material;
+				if(pendingTexture){
+					hoodieMaterial.map = pendingTexture;
+					hoodieMaterial.needsUpdate = true;
+					pendingTexture = null;
+				}
+			}
+			
+		}, undefined, function(error) {
+			console.error("Error loading model ${modelName}", error);
+		});
+	});
+}
+
+for (let name in modelPaths) {
+	loadModel(name, modelPaths[name]);
+}
+
 
 // Function to change the texture of the hoodie
 function changeTexture(imageFile) {
@@ -72,15 +107,28 @@ function changeTexture(imageFile) {
 		texture.center.set(0.5, 0.5); // Set the center of rotation to the center of the texture
 		texture.rotation = Math.PI; // Rotate the texture by 180 degrees (Math.PI radians)
 	
-        if (hoodieMaterial) {
-            console.log("Previous material map:", hoodieMaterial.map);
-            hoodieMaterial.map = texture;
-            hoodieMaterial.needsUpdate = true;
-            console.log("New material map:", hoodieMaterial.map);
-        } else {
-            console.error("Hoodie material not found.");
-            pendingTexture = texture;
-        }
+
+		if(canvasMaterial){
+			canvasMaterial.map = texture;
+			canvasMaterial.needsUpdate = true;
+		}else{
+			pendingTexture = texture;
+		}
+
+		if(posterMaterial){
+			posterMaterial.map = texture;
+			posterMaterial.needsUpdate = true;
+		}else{
+			pendingTexture = texture;
+		}
+
+		if(hoodieMaterial){
+			hoodieMaterial.map = texture;
+			hoodieMaterial.needsUpdate = true;
+		}else{
+			pendingTexture = texture;
+		}
+
     });
 }
 
@@ -117,6 +165,15 @@ document.getElementById('fileInput').addEventListener('change', function (event)
     }
 });
 
+window.toggleModel = changeVisibleModel;
+
+// Function to change the visible model
+function changeVisibleModel(visibleModelName) {
+	for (let name in models) {
+		if (models[name]) models[name].visible = (name === visibleModelName);
+	}
+	renderer.render(scene, camera);
+}
 
 
 // Render loop
@@ -125,5 +182,6 @@ function animate() {
     controls.update();
     renderer.render(scene, camera);
 }
+
 
 animate();
