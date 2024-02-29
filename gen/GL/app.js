@@ -50,12 +50,20 @@ function loadModel(modelName, path) {
 	loader.load(path, function(gltf) {
 		models[modelName] = gltf.scene;
 		models[modelName].visible = false;
-		if(modelName === 'canvas'){
-			models['canvas'].visible = true;
-		}
 		scene.add(gltf.scene);
 
-		gltf.scene.position.set(0, 0, -1);
+		if(modelName === 'canvas'){
+			models['canvas'].visible = true;
+			gltf.scene.position.set(0, 0, -1);
+		}
+		if(modelName === 'poster'){
+			gltf.scene.position.set(0, 0, -2);
+		}
+		if(modelName === 'hoodie'){//scale up
+			gltf.scene.position.set(0, 0, -1);
+			gltf.scene.scale.set(1.3, 1.3, 1.3);
+		}
+		
 		gltf.scene.rotation.set(0,  - Math.PI / 2, 0);
 		gltf.scene.traverse(function(child) {
 			//mesh name is "Plane", "Chest" or "poster_mesh" simultaneously
