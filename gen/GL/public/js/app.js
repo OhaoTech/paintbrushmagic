@@ -35,9 +35,9 @@ document.getElementById('btnHoodie').addEventListener('click', () => toggleModel
 
 // Load 3 models: canvas, poster, and hoodie
 const modelPaths = {
-	'canvas': 'canvas/canvas.gltf',
-	'poster': 'poster/poster.gltf',
-	'hoodie': 'hoodie/chest.gltf'
+	'canvas': 'assets/canvas/canvas.gltf',
+	'poster': 'assets/poster/poster.gltf',
+	'hoodie': 'assets/hoodie/chest.gltf'
 };
 const models = {};
 
@@ -145,7 +145,7 @@ const pmremGenerator = new PMREMGenerator(renderer);
 pmremGenerator.compileEquirectangularShader();
 const exrLoader = new EXRLoader();
 exrLoader.setDataType(THREE.HalfFloatType);
-exrLoader.load('4k.exr', function (texture) {
+exrLoader.load('assets/4k.exr', function (texture) {
 	const envMap = pmremGenerator.fromEquirectangular(texture).texture;
 	pmremGenerator.dispose();
 

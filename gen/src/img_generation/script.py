@@ -147,7 +147,7 @@ def generate(prompt, negative_prompt, style, size, quality, session_state):
 def jump_render_page(image_url):
     # TODO: pass the image url to the display page
     param = {'image_url': image_url}
-    webbrowser.open("http://127.0.0.1:5500/gen/GL/index.html")
+    webbrowser.open("http://127.0.0.1:5500") #running under express js server
 
 
 # change display to order

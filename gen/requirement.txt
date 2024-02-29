@@ -4,3 +4,5 @@ requests
 pillow
 python-dotenv
 flask
+stripe
+sqlite3

@@ -2,6 +2,7 @@
 
 Hard code information in the  `.env` file
 
+
 ## Run
 
 `pip install -r requirements.txt`
@@ -14,6 +15,7 @@ Then run script.py.
 
 - [X] base AI generation webpage
 - [X] restrict usage via IP(flask)
-- [ ] resize the image
-- [ ] payment via stripe
-- [ ] image preview on product
+- [X] resize the image
+- [X] payment via stripe
+- [X] image preview on product
+- [ ] connect all procedures
