@@ -4,7 +4,7 @@ import webbrowser
 from tempfile import NamedTemporaryFile
 
 
-def jump(url, param):
+def jump(url, param, method='post'):
     # add parameters
     template = """<input type="hidden" name="{}" value="{}">"""
     tmp = ""
@@ -16,7 +16,7 @@ def jump(url, param):
     <html>
     <head><title>Redirecting...</title></head>
     <body onload="document.forms[0].submit()">
-        <form action="{url}" method="post" id="searchForm">
+        <form action="{url}" method="{method}" id="searchForm">
             {tmp}
         </form>
     </body>
