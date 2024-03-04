@@ -158,7 +158,8 @@ def change_to_order_display():
         visible=False), gr.Dropdown(visible=False), gr.Button(visible=False), gr.Button(visible=False), gr.Button(
         visible=False), gr.Button(visible=False), gr.Label(visible=False), gr.Button(visible=False), gr.Dropdown(
         visible=True), gr.Dropdown(visible=True), gr.Dropdown(visible=True), gr.Textbox(visible=True), gr.Button(
-        visible=True), gr.Button(visible=True), gr.Number(visible=True), gr.Markdown(visible=False), gr.Markdown(visible=True)
+        visible=True), gr.Button(visible=True), gr.Number(visible=True), gr.Markdown(visible=False), gr.Markdown(
+        visible=True)
 
 
 # change display to image generation
@@ -167,7 +168,8 @@ def change_to_generation_display():
         visible=True), gr.Dropdown(visible=True), gr.Button(visible=True), gr.Button(visible=True), gr.Button(
         visible=True), gr.Button(visible=True), gr.Label(visible=True), gr.Button(visible=True), gr.Dropdown(
         visible=False), gr.Dropdown(visible=False), gr.Dropdown(visible=False), gr.Textbox(visible=False), gr.Button(
-        visible=False), gr.Button(visible=False), gr.Number(visible=False), gr.Markdown(visible=True), gr.Markdown(visible=False)
+        visible=False), gr.Button(visible=False), gr.Number(visible=False), gr.Markdown(visible=True), gr.Markdown(
+        visible=False)
 
 
 # Logic to add more prompts when "Get more" is clicked
@@ -190,6 +192,34 @@ def change_size_dropdown(kind):
     elif kind == 'post':
         return gr.Dropdown(label="Size", choices=post_size, value=post_size[0], interactive=True), gr.Dropdown(
             visible=False)
+
+
+def generate_order(image_url, kind, size, color, quantity, address):
+    if address is None or address == '':
+        # TODO check the validity of address
+        pass
+
+    if kind == 'clothe':
+        data = {'kind': kind, 'image_url': image_url, 'size': size, 'color': color, 'quantity': quantity,
+                'address': address}
+    elif kind == 'canvas':
+        data = {'kind': kind, 'image_url': image_url, 'size': size, 'quantity': quantity, 'address': address}
+    elif kind == 'post':
+        data = {'kind': kind, 'image_url': image_url, 'size': size, 'quantity': quantity, 'address': address}
+    response = requests.post(IMAGE_SERVER_DOMAIN + '/generate_order', json=data)
+
+    if response.status_code == 200:
+        data = response.json()
+        status = data['status']
+        if status == "error":
+            # TODO: if status is error, how to do
+            pass
+        else:
+            order_id = data['order_id']
+            print(order_id)
+
+    # TODO: after getting the order id, we should redirect to pay page
+    pass
 
 
 # Create the Gradio interface
@@ -259,14 +289,16 @@ with gr.Blocks() as demo:
         fn=change_to_order_display,
         inputs=[],
         outputs=[prompt, negative_prompt, style, ratio, quality, generate_btn, surprise_btn, show_btn, buy_btn,
-                 prompts_left, get_more, kind, size, color, address, pay_btn, back_btn, quantity, generation_title, order_title]
+                 prompts_left, get_more, kind, size, color, address, pay_btn, back_btn, quantity, generation_title,
+                 order_title]
     )
 
     back_btn.click(
         fn=change_to_generation_display,
         inputs=[],
         outputs=[prompt, negative_prompt, style, ratio, quality, generate_btn, surprise_btn, show_btn, buy_btn,
-                 prompts_left, get_more, kind, size, color, address, pay_btn, back_btn, quantity, generation_title, order_title]
+                 prompts_left, get_more, kind, size, color, address, pay_btn, back_btn, quantity, generation_title,
+                 order_title]
     )
 
     get_more.click(
@@ -274,10 +306,17 @@ with gr.Blocks() as demo:
         inputs=[session_state],
         outputs=prompts_left
     )
+
     kind.change(
         fn=change_size_dropdown,
         inputs=[kind],
         outputs=[size, color]
+    )
+
+    pay_btn.click(
+        fn=generate_order,
+        inputs=[image_url, kind, size, color, quantity, address],
+        outputs=[]
     )
 
 # Launch the Gradio interface

@@ -67,6 +67,7 @@ def init_db():
                 image_url TEXT NOT NULL,
                 color TEXT NOT NULL,
                 size TEXT NOT NULL,
+                quantity INTEGER NOT NULL,
                 address TEXT NOT NULL,
                 payment_status INTEGER NOT NULL DEFAULT 0
             )
@@ -76,6 +77,7 @@ def init_db():
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     image_url TEXT NOT NULL,
                     size TEXT NOT NULL,
+                    quantity INTEGER NOT NULL,
                     address TEXT NOT NULL,
                     payment_status INTEGER NOT NULL DEFAULT 0
                 )
@@ -85,6 +87,7 @@ def init_db():
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     image_url TEXT NOT NULL,
                     size TEXT NOT NULL,
+                    quantity INTEGER NOT NULL,
                     address TEXT NOT NULL,
                     payment_status INTEGER NOT NULL DEFAULT 0
                 )
@@ -181,6 +184,33 @@ def select_order():
     else:
         image_url, color, size, payment_status = order
         return jsonify({"status": "success", "image_url": image_url, "color": color, "size": size, "payment_status": payment_status})
+@app.route('/generate_order', methods=['POST'])
+def generate_order():
+    data = request.get_json()
+    image_url = data['image_url']
+    kind = data['kind']
+    size = data['size']
+    quantity = data['quantity']
+    address = data['address']
+
+    conn = get_db_connection(ORDER_DATABASE_FILE)
+    if kind == 'clothe':
+        color = data['color']
+        conn.execute('INSERT INTO clothe_order (image_url, color, size, quantity, address) VALUES (?, ?, ?, ?, ?)', (image_url, color, size, quantity, address))
+        conn.commit()
+    elif kind == 'canvas':
+        conn.execute('INSERT INTO canvas_order (image_url, size, quantity, address) VALUES (?, ?, ?, ?)', (image_url, size, quantity, address))
+        conn.commit()
+    elif kind == 'post':
+        conn.execute('INSERT INTO post_order (image_url, size, quantity, address) VALUES (?, ?, ?, ?)',
+                     (image_url, size, quantity, address))
+        conn.commit()
+    else:
+        conn.close()
+        return {"status": "error", "message": "There is no kind of order to " + kind}
+
+    order_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    return {"status": "success", "order_id": str(order_id), 'kind': kind}
 
 @app.route('/update_clothe_order_payment_status', methods=['POST'])
 def update_clothe_order_payment_status():
