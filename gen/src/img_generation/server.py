@@ -83,7 +83,7 @@ def init_db():
                 )
             """)
     conn.execute("""
-                CREATE TABLE IF NOT EXISTS post_order (
+                CREATE TABLE IF NOT EXISTS poster_order (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     image_url TEXT NOT NULL,
                     size TEXT NOT NULL,
@@ -201,8 +201,8 @@ def generate_order():
     elif kind == 'canvas':
         conn.execute('INSERT INTO canvas_order (image_url, size, quantity, address) VALUES (?, ?, ?, ?)', (image_url, size, quantity, address))
         conn.commit()
-    elif kind == 'post':
-        conn.execute('INSERT INTO post_order (image_url, size, quantity, address) VALUES (?, ?, ?, ?)',
+    elif kind == 'poster':
+        conn.execute('INSERT INTO poster_order (image_url, size, quantity, address) VALUES (?, ?, ?, ?)',
                      (image_url, size, quantity, address))
         conn.commit()
     else:
@@ -210,6 +210,7 @@ def generate_order():
         return {"status": "error", "message": "There is no kind of order to " + kind}
 
     order_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    conn.close()
     return {"status": "success", "order_id": str(order_id), 'kind': kind}
 
 @app.route('/update_clothe_order_payment_status', methods=['POST'])
@@ -223,43 +224,12 @@ def update_clothe_order_payment_status():
     conn.close()
     return jsonify({"status": "success"})
 
-def generate_post_checkout_item(name, size, address, currency='usd', price=999, quantity=1):
+def generate_checkout_item(kind, quantity=1, currency='usd', price=999):
     item = {
         'price_data': {
             'currency': currency,
             'product_data': {
-                'name': name,
-                'size': size,
-                'address': address
-            },
-            'unit_amount': price,
-        },
-        'quantity': quantity,
-    }
-    return item
-def generate_canvas_checkout_item(name, size, address, currency='usd', price=999, quantity=1):
-    item = {
-        'price_data': {
-            'currency': currency,
-            'product_data': {
-                'name': name,
-                'size': size,
-                'address': address
-            },
-            'unit_amount': price,
-        },
-        'quantity': quantity,
-    }
-    return item
-def generate_clothe_checkout_item(name, color, size, address, quantity=1, currency='usd', price=999):
-    item = {
-        'price_data': {
-            'currency': currency,
-            'product_data': {
-                'name': name,
-                'color': color,
-                'size': size,
-                'address': address
+                'name': kind,
             },
             'unit_amount': price,
         },
@@ -267,18 +237,17 @@ def generate_clothe_checkout_item(name, color, size, address, quantity=1, curren
     }
     return item
 
-@app.route('/create-clothe-checkout-session', methods=['GET'])
-def create_clothe_checkout_session():
+@app.route('/create-checkout-session', methods=['GET'])
+def create_checkout_session():
     try:
         data = request.get_json()
-        name = data['name']
-        color = data['color']
-        size = data['size']
-        address = data['address']
+        kind = data['kind']
         quantity = data['quantity']
 
+        # TODO: customer buy multi products
         items = []
-        items.append(generate_clothe_checkout_item(name=name, color=color, size=size, address=address, quantity=quantity))
+        item = generate_checkout_item(kind=kind, quantity=quantity)
+        items.append(item)
 
         checkout_session = stripe.checkout.Session.create(
             line_items=items,
@@ -287,55 +256,9 @@ def create_clothe_checkout_session():
             cancel_url=IMAGE_SERVER_DOMAIN + '/cancel.html',
         )
     except Exception as e:
-        return str(e)
+        return {"status": "error", "message": "There are some errors occurred: " + str(e)}
 
-    return redirect(checkout_session.url, code=303)
-
-@app.route('/create-canvas-checkout-session', methods=['GET'])
-def create_canvas_checkout_session():
-    try:
-        data = request.get_json()
-        name = data['name']
-        size = data['size']
-        address = data['address']
-        quantity = data['quantity']
-
-        items = []
-        items.append(generate_canvas_checkout_item(name=name, size=size, address=address, quantity=quantity))
-
-        checkout_session = stripe.checkout.Session.create(
-            line_items=items,
-            mode='payment',
-            success_url=IMAGE_SERVER_DOMAIN + '/success.html',
-            cancel_url=IMAGE_SERVER_DOMAIN + '/cancel.html',
-        )
-    except Exception as e:
-        return str(e)
-
-    return redirect(checkout_session.url, code=303)
-
-@app.route('/create-post-checkout-session', methods=['GET'])
-def create_post_checkout_session():
-    try:
-        data = request.get_json()
-        name = data['name']
-        size = data['size']
-        address = data['address']
-        quantity = data['quantity']
-
-        items = []
-        items.append(generate_canvas_checkout_item(name=name, size=size, address=address, quantity=quantity))
-
-        checkout_session = stripe.checkout.Session.create(
-            line_items=items,
-            mode='payment',
-            success_url=IMAGE_SERVER_DOMAIN + '/success.html',
-            cancel_url=IMAGE_SERVER_DOMAIN + '/cancel.html',
-        )
-    except Exception as e:
-        return str(e)
-
-    return redirect(checkout_session.url, code=303)
+    return {'status': 'success', 'url': checkout_session.url}
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

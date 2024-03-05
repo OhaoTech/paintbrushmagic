@@ -34,10 +34,10 @@ sizes = ["1024x1024", "1024x1792", "1792x1024"]
 qualities = ["standard", "hd"]
 
 # variants about order generation
-kind_list = ['clothe', 'canvas', 'post']
+kind_list = ['clothe', 'canvas', 'poster']
 clothe_size = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
 canvas_size = ['20x25', '30x40', '40x50', '60x80']
-post_size = ['A1', 'A2', 'A3']
+poster_size = ['A1', 'A2', 'A3']
 color_list = ['white', 'red', 'green', 'blue', 'black']
 
 
@@ -189,8 +189,8 @@ def change_size_dropdown(kind):
     elif kind == 'canvas':
         return gr.Dropdown(label="Size(cm)", choices=canvas_size, value=canvas_size[0], interactive=True), gr.Dropdown(
             visible=False)
-    elif kind == 'post':
-        return gr.Dropdown(label="Size", choices=post_size, value=post_size[0], interactive=True), gr.Dropdown(
+    elif kind == 'poster':
+        return gr.Dropdown(label="Size", choices=poster_size, value=poster_size[0], interactive=True), gr.Dropdown(
             visible=False)
 
 
@@ -200,26 +200,42 @@ def generate_order(image_url, kind, size, color, quantity, address):
         pass
 
     if kind == 'clothe':
-        data = {'kind': kind, 'image_url': image_url, 'size': size, 'color': color, 'quantity': quantity,
-                'address': address}
+        order_data = {'kind': kind, 'image_url': image_url, 'size': size, 'color': color, 'quantity': quantity,
+                      'address': address}
     elif kind == 'canvas':
-        data = {'kind': kind, 'image_url': image_url, 'size': size, 'quantity': quantity, 'address': address}
-    elif kind == 'post':
-        data = {'kind': kind, 'image_url': image_url, 'size': size, 'quantity': quantity, 'address': address}
-    response = requests.post(IMAGE_SERVER_DOMAIN + '/generate_order', json=data)
+        order_data = {'kind': kind, 'image_url': image_url, 'size': size, 'quantity': quantity, 'address': address}
+    elif kind == 'poster':
+        order_data = {'kind': kind, 'image_url': image_url, 'size': size, 'quantity': quantity, 'address': address}
+    response = requests.post(IMAGE_SERVER_DOMAIN + '/generate_order', json=order_data)
 
     if response.status_code == 200:
         data = response.json()
         status = data['status']
         if status == "error":
             # TODO: if status is error, how to do
+            print(data['message'])
             pass
         else:
             order_id = data['order_id']
-            print(order_id)
+            create_checkout_session(order_id, kind, quantity)
 
     # TODO: after getting the order id, we should redirect to pay page
     pass
+
+
+def create_checkout_session(order_id, kind, quantity):
+    data = {'order_id': order_id, 'kind': kind, 'quantity': quantity}
+    response = requests.get(IMAGE_SERVER_DOMAIN + '/create-checkout-session', json=data)
+    if response.status_code == 200:
+        data = response.json()
+        status = data['status']
+        if status == "error":
+            # let user know there is an error happened
+            print(data['message'])
+            pass
+        else:
+            url = data['url']
+            webbrowser.open(url)
 
 
 # Create the Gradio interface
