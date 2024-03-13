@@ -1,8 +1,14 @@
+import uuid
+from datetime import datetime
+
+import requests
 import stripe
 from flask import Flask, request, jsonify, redirect
 import sqlite3
 import os
 import dotenv
+from snowflake import SnowflakeGenerator
+
 dotenv.load_dotenv("../../.env")
 
 prompt_free_times = os.getenv("PROMPT_FREE_TIMES")
@@ -20,7 +26,7 @@ app.secret_key = FLASK_SECRET_KEY
 PROMPT_DATABASE_FILE = 'user_prompts.db'
 IMAGE_URL_DATABASE_FILE = 'image_url.db'
 ORDER_DATABASE_FILE = 'orders.db'
-
+gen = SnowflakeGenerator(42)
 def get_db_connection(database_file):
     conn = sqlite3.connect(database_file)
     conn.row_factory = sqlite3.Row
@@ -52,6 +58,7 @@ def init_db():
             CREATE TABLE IF NOT EXISTS image_url (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 url TEXT NOT NULL,
+                local_url varchar(500),
                 prompts TEXT NOT NULL,
                 style TEXT NOT NULL,
                 ratio TEXT NOT NULL
@@ -63,7 +70,7 @@ def init_db():
     conn = get_order_db_connection()
     conn.execute("""
             CREATE TABLE IF NOT EXISTS clothe_order (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id BIGINT PRIMARY KEY,
                 image_url TEXT NOT NULL,
                 color TEXT NOT NULL,
                 size TEXT NOT NULL,
@@ -74,7 +81,7 @@ def init_db():
         """)
     conn.execute("""
                 CREATE TABLE IF NOT EXISTS canvas_order (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id BIGINT PRIMARY KEY,
                     image_url TEXT NOT NULL,
                     size TEXT NOT NULL,
                     quantity INTEGER NOT NULL,
@@ -84,7 +91,7 @@ def init_db():
             """)
     conn.execute("""
                 CREATE TABLE IF NOT EXISTS poster_order (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id BIGINT PRIMARY KEY,
                     image_url TEXT NOT NULL,
                     size TEXT NOT NULL,
                     quantity INTEGER NOT NULL,
@@ -108,16 +115,27 @@ def add_image_generation_record():
     prompt = data['prompt']
     style = data['style']
     ratio = data['ratio']
-
+    local_url = write_file(url)
     conn = get_image_db_connection()
     conn.execute("""
-                INSERT INTO image_url 
-                (url, prompts, style, ratio) 
-                VALUES (?, ?, ?, ?)
-            """, (url, prompt, style, ratio))
+                INSERT INTO image_url
+                (url, local_url, prompts, style, ratio)
+                VALUES (?, ?, ?, ?, ?)
+            """, (url, local_url, prompt, style, ratio))
     conn.commit()
     conn.close()
     return jsonify({'status': 'success'})
+
+
+def write_file(url):
+    img_binary_data = requests.get(url).content
+    now = datetime.now()
+    file_dir = f"D:/data/img/{now.year}{now.month}{now.day}/"
+    os.makedirs(file_dir, exist_ok=True)
+    filename = str(uuid.uuid4()) + '.png'
+    with open(file_dir + filename, 'wb') as f:
+        f.write(img_binary_data)
+    return file_dir + filename
 
 @app.route('/get_prompts', methods=['GET'])
 def get_prompts():
@@ -193,23 +211,24 @@ def generate_order():
     quantity = data['quantity']
     address = data['address']
 
+    # if get database last insert id maybe occur concurrent problem, so use snowflake generate order id
+    order_id = next(gen)
     conn = get_db_connection(ORDER_DATABASE_FILE)
     if kind == 'clothe':
         color = data['color']
-        conn.execute('INSERT INTO clothe_order (image_url, color, size, quantity, address) VALUES (?, ?, ?, ?, ?)', (image_url, color, size, quantity, address))
+        conn.execute('INSERT INTO clothe_order (id, image_url, color, size, quantity, address) VALUES (?, ?, ?, ?, ?, ?)', (order_id, image_url, color, size, quantity, address))
         conn.commit()
     elif kind == 'canvas':
-        conn.execute('INSERT INTO canvas_order (image_url, size, quantity, address) VALUES (?, ?, ?, ?)', (image_url, size, quantity, address))
+        conn.execute('INSERT INTO canvas_order (id, image_url, size, quantity, address) VALUES (?, ?, ?, ?, ?)', (order_id, image_url, size, quantity, address))
         conn.commit()
     elif kind == 'poster':
-        conn.execute('INSERT INTO poster_order (image_url, size, quantity, address) VALUES (?, ?, ?, ?)',
-                     (image_url, size, quantity, address))
+        conn.execute('INSERT INTO poster_order (id, image_url, size, quantity, address) VALUES (?, ?, ?, ?, ?)',
+                     (order_id, image_url, size, quantity, address))
         conn.commit()
     else:
         conn.close()
         return {"status": "error", "message": "There is no kind of order to " + kind}
 
-    order_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
     conn.close()
     return {"status": "success", "order_id": str(order_id), 'kind': kind}
 

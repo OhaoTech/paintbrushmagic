@@ -5,4 +5,4 @@ pillow
 python-dotenv
 flask
 stripe
-sqlite3
+snowflake-id
