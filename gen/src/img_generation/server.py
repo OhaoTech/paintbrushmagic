@@ -1,3 +1,4 @@
+import json
 import uuid
 from datetime import datetime
 
@@ -16,7 +17,10 @@ FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY")
 IMAGE_SERVER_DOMAIN = os.getenv("IMAGE_SERVER_DOMAIN")
 
 stripe.api_key = os.getenv("STRIPE_API_KEY")
-
+# If you are testing your webhook locally with the Stripe CLI you
+# can find the endpoint's secret by running `stripe listen`
+# Otherwise, find your endpoint's secret in your webhook settings in the Developer Dashboard
+endpoint_key = os.getenv("STRIPE_ENDPOINT_KEY")
 app = Flask(__name__,
             static_url_path='',
             static_folder='public')
@@ -27,18 +31,30 @@ PROMPT_DATABASE_FILE = 'user_prompts.db'
 IMAGE_URL_DATABASE_FILE = 'image_url.db'
 ORDER_DATABASE_FILE = 'orders.db'
 gen = SnowflakeGenerator(42)
+
+with open("../../stripe_webhook_white_ip.json", "r") as file:
+    data = json.load(file)
+
+webhook_ips = data["WEBHOOKS"]
+
+
 def get_db_connection(database_file):
     conn = sqlite3.connect(database_file)
     conn.row_factory = sqlite3.Row
     return conn
+
+
 def get_image_db_connection():
     return get_db_connection(IMAGE_URL_DATABASE_FILE)
+
 
 def get_prompt_db_connection():
     return get_db_connection(PROMPT_DATABASE_FILE)
 
+
 def get_order_db_connection():
     return get_db_connection(ORDER_DATABASE_FILE)
+
 
 def init_db():
     # create user remaining prompts database
@@ -102,10 +118,12 @@ def init_db():
     conn.commit()
     conn.close()
 
+
 @app.before_request
 def initialize():
     # Initialize the database table
     init_db()
+
 
 # add image generation record to database
 @app.route('/add_image_record', methods=['POST'])
@@ -137,6 +155,7 @@ def write_file(url):
         f.write(img_binary_data)
     return file_dir + filename
 
+
 @app.route('/get_prompts', methods=['GET'])
 def get_prompts():
     user_ip = request.remote_addr
@@ -155,6 +174,7 @@ def get_prompts():
 
     return jsonify({'prompts_left': prompts_left})
 
+
 @app.route('/update_prompts', methods=['POST'])
 def update_prompts():
     user_ip = request.remote_addr
@@ -165,6 +185,7 @@ def update_prompts():
 
     return jsonify({'status': 'success'})
 
+
 @app.route('/add_prompts', methods=['POST'])
 def add_prompts():
     user_ip = request.remote_addr
@@ -174,6 +195,7 @@ def add_prompts():
     conn.close()
 
     return jsonify({'status': 'success'})
+
 
 @app.route('/create_clothe_order', methods=['POST'])
 def create_clothe_order():
@@ -188,12 +210,14 @@ def create_clothe_order():
 
     return jsonify({'status': 'success'})
 
+
 @app.route('/select_clothe_order', methods=['POST'])
 def select_order():
     data = request.get_json()
     order_id = data['id']
     conn = get_db_connection()
-    order = conn.execute('SELECT image_url, color, size, payment_status FROM clothe_order WHERE id = ?', (order_id,)).fetchone()
+    order = conn.execute('SELECT image_url, color, size, payment_status FROM clothe_order WHERE id = ?',
+                         (order_id,)).fetchone()
     conn.close()
 
     if order is None:
@@ -201,7 +225,10 @@ def select_order():
         pass
     else:
         image_url, color, size, payment_status = order
-        return jsonify({"status": "success", "image_url": image_url, "color": color, "size": size, "payment_status": payment_status})
+        return jsonify({"status": "success", "image_url": image_url, "color": color, "size": size,
+                        "payment_status": payment_status})
+
+
 @app.route('/generate_order', methods=['POST'])
 def generate_order():
     data = request.get_json()
@@ -216,10 +243,13 @@ def generate_order():
     conn = get_db_connection(ORDER_DATABASE_FILE)
     if kind == 'clothe':
         color = data['color']
-        conn.execute('INSERT INTO clothe_order (id, image_url, color, size, quantity, address) VALUES (?, ?, ?, ?, ?, ?)', (order_id, image_url, color, size, quantity, address))
+        conn.execute(
+            'INSERT INTO clothe_order (id, image_url, color, size, quantity, address) VALUES (?, ?, ?, ?, ?, ?)',
+            (order_id, image_url, color, size, quantity, address))
         conn.commit()
     elif kind == 'canvas':
-        conn.execute('INSERT INTO canvas_order (id, image_url, size, quantity, address) VALUES (?, ?, ?, ?, ?)', (order_id, image_url, size, quantity, address))
+        conn.execute('INSERT INTO canvas_order (id, image_url, size, quantity, address) VALUES (?, ?, ?, ?, ?)',
+                     (order_id, image_url, size, quantity, address))
         conn.commit()
     elif kind == 'poster':
         conn.execute('INSERT INTO poster_order (id, image_url, size, quantity, address) VALUES (?, ?, ?, ?, ?)',
@@ -232,6 +262,7 @@ def generate_order():
     conn.close()
     return {"status": "success", "order_id": str(order_id), 'kind': kind}
 
+
 @app.route('/update_clothe_order_payment_status', methods=['POST'])
 def update_clothe_order_payment_status():
     data = request.get_json()
@@ -242,6 +273,69 @@ def update_clothe_order_payment_status():
     conn.commit()
     conn.close()
     return jsonify({"status": "success"})
+
+
+def idempotent_Order(order_id, kind):
+    conn = get_db_connection(ORDER_DATABASE_FILE)
+    if kind == 'clothe':
+        order = conn.execute('select * from clothe_order WHERE id = ?', (order_id,)).fetchone()
+    elif kind == 'canvas':
+        order = conn.execute('select * from canvas_order WHERE id = ?', (order_id,)).fetchone()
+    elif kind == 'poster':
+        order = conn.execute('select * from poster_order WHERE id = ?',  (order_id,)).fetchone()
+    else:
+        raise Exception
+    return order['payment_status'] == 0
+
+def update_order_status(order_id, kind):
+    conn = get_db_connection(ORDER_DATABASE_FILE)
+    if kind == 'clothe':
+        conn.execute('UPDATE clothe_order SET payment_status = ? WHERE id = ?', (2, order_id))
+    elif kind == 'canvas':
+        conn.execute('UPDATE canvas_order SET payment_status = ? WHERE id = ?', (2, order_id))
+    elif kind == 'poster':
+        conn.execute('UPDATE poster_order SET payment_status = ? WHERE id = ?', (2, order_id))
+    else:
+        raise Exception
+    conn.commit()
+
+
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    # first we need verify the ip, sure it in  stripe provide webhook ips
+    ip = request.remote_addr
+    if ip is None:
+        return jsonify({"status": "success"})
+    if ip not in webhook_ips:
+        return jsonify({"status": "success"})
+
+    payload = request.data
+    sig_header = request.headers['Stripe-Signature']
+    # second we need verify Signature
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, endpoint_key
+        )
+    except ValueError as e:
+        print('Error parsing payload: {}'.format(str(e)))
+        return '', 400
+    except stripe.error.SignatureVerificationError as e:
+        print('Error verifying webhook signature: {}'.format(str(e)))
+        return '', 400
+
+    data = request.get_json()
+    if event.type == 'checkout.session.completed':
+        obj = data['data']['object']
+        metadata = obj['metadata']
+        order_id = metadata['order_id']
+        kind = metadata['kind']
+        if not idempotent_Order(order_id, kind):
+            return 'duplicate message', 400
+        update_order_status(order_id, kind)
+        # TODO notify admin to send product
+
+    return jsonify({"status": "success"})
+
 
 def generate_checkout_item(kind, quantity=1, currency='usd', price=999):
     item = {
@@ -256,12 +350,14 @@ def generate_checkout_item(kind, quantity=1, currency='usd', price=999):
     }
     return item
 
+
 @app.route('/create-checkout-session', methods=['GET'])
 def create_checkout_session():
     try:
         data = request.get_json()
         kind = data['kind']
         quantity = data['quantity']
+        order_id = data['order_id']
 
         # TODO: customer buy multi products
         items = []
@@ -271,13 +367,19 @@ def create_checkout_session():
         checkout_session = stripe.checkout.Session.create(
             line_items=items,
             mode='payment',
+            metadata={
+                'order_id': order_id,
+                'kind': kind
+            },
             success_url=IMAGE_SERVER_DOMAIN + '/success.html',
             cancel_url=IMAGE_SERVER_DOMAIN + '/cancel.html',
         )
+        print(checkout_session.id)
     except Exception as e:
         return {"status": "error", "message": "There are some errors occurred: " + str(e)}
 
     return {'status': 'success', 'url': checkout_session.url}
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
