@@ -1,4 +1,5 @@
 import json
+import platform
 import uuid
 from datetime import datetime
 
@@ -147,13 +148,24 @@ def add_image_generation_record():
 
 def write_file(url):
     img_binary_data = requests.get(url).content
-    now = datetime.now()
-    file_dir = f"D:/data/img/{now.year}{now.month}{now.day}/"
+    file_dir = generate_file_dir()
     os.makedirs(file_dir, exist_ok=True)
     filename = str(uuid.uuid4()) + '.png'
     with open(file_dir + filename, 'wb') as f:
         f.write(img_binary_data)
     return file_dir + filename
+
+
+def generate_file_dir():
+    system = platform.system()
+    now = datetime.now()
+    if system == "Windows":
+        file_dir = f"D:/data/img/{now.year}{now.month}{now.day}/"
+    elif system == "Linux":
+        file_dir = f"/data/img/{now.year}{now.month}{now.day}/"
+    else:
+        raise Exception
+    return file_dir
 
 
 @app.route('/get_prompts', methods=['GET'])
