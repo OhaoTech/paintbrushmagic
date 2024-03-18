@@ -6,3 +6,4 @@ python-dotenv
 flask
 stripe
 snowflake-id
+flask-cors

@@ -196,8 +196,7 @@ def change_size_dropdown(kind):
 
 def generate_order(image_url, kind, size, color, quantity, address):
     if address is None or address == '':
-        # TODO check the validity of address
-        pass
+        return "address must not be null"
 
     if kind == 'clothe':
         order_data = {'kind': kind, 'image_url': image_url, 'size': size, 'color': color, 'quantity': quantity,
@@ -278,6 +277,8 @@ with gr.Blocks() as demo:
         address = gr.Textbox(label="Your address", placeholder="somewhere you want to receive the package",
                              interactive=True, visible=False)
     with gr.Row():
+        addressTip = gr.Label()
+    with gr.Row():
         back_btn = gr.Button("Back to generation page", visible=False)
         pay_btn = gr.Button("Pay it!", visible=False)
 
@@ -332,7 +333,7 @@ with gr.Blocks() as demo:
     pay_btn.click(
         fn=generate_order,
         inputs=[image_url, kind, size, color, quantity, address],
-        outputs=[]
+        outputs=[addressTip]
     )
 
 # Launch the Gradio interface

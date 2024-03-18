@@ -2,10 +2,12 @@ import json
 import platform
 import uuid
 from datetime import datetime
+from urllib.parse import unquote
 
 import requests
 import stripe
-from flask import Flask, request, jsonify, redirect
+from flask import Flask, request, jsonify, redirect, Response
+from flask_cors import CORS
 import sqlite3
 import os
 import dotenv
@@ -25,6 +27,7 @@ endpoint_key = os.getenv("STRIPE_ENDPOINT_KEY")
 app = Flask(__name__,
             static_url_path='',
             static_folder='public')
+CORS(app)
 app.secret_key = FLASK_SECRET_KEY
 
 # Database setup
@@ -93,7 +96,9 @@ def init_db():
                 size TEXT NOT NULL,
                 quantity INTEGER NOT NULL,
                 address TEXT NOT NULL,
-                payment_status INTEGER NOT NULL DEFAULT 0
+                payment_status INTEGER NOT NULL DEFAULT 0,
+                create_date datetime,
+                pay_date datetime
             )
         """)
     conn.execute("""
@@ -103,7 +108,9 @@ def init_db():
                     size TEXT NOT NULL,
                     quantity INTEGER NOT NULL,
                     address TEXT NOT NULL,
-                    payment_status INTEGER NOT NULL DEFAULT 0
+                    payment_status INTEGER NOT NULL DEFAULT 0,
+                    create_date datetime,
+                    pay_date datetime
                 )
             """)
     conn.execute("""
@@ -113,7 +120,9 @@ def init_db():
                     size TEXT NOT NULL,
                     quantity INTEGER NOT NULL,
                     address TEXT NOT NULL,
-                    payment_status INTEGER NOT NULL DEFAULT 0
+                    payment_status INTEGER NOT NULL DEFAULT 0,
+                    create_date datetime,
+                    pay_date datetime
                 )
             """)
     conn.commit()
@@ -256,16 +265,16 @@ def generate_order():
     if kind == 'clothe':
         color = data['color']
         conn.execute(
-            'INSERT INTO clothe_order (id, image_url, color, size, quantity, address) VALUES (?, ?, ?, ?, ?, ?)',
-            (order_id, image_url, color, size, quantity, address))
+            'INSERT INTO clothe_order (id, image_url, color, size, quantity, address, create_date) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            (order_id, image_url, color, size, quantity, address, datetime.now()))
         conn.commit()
     elif kind == 'canvas':
-        conn.execute('INSERT INTO canvas_order (id, image_url, size, quantity, address) VALUES (?, ?, ?, ?, ?)',
-                     (order_id, image_url, size, quantity, address))
+        conn.execute('INSERT INTO canvas_order (id, image_url, size, quantity, address, create_date) VALUES (?, ?, ?, ?, ?, ?)',
+                     (order_id, image_url, size, quantity, address, datetime.now()))
         conn.commit()
     elif kind == 'poster':
-        conn.execute('INSERT INTO poster_order (id, image_url, size, quantity, address) VALUES (?, ?, ?, ?, ?)',
-                     (order_id, image_url, size, quantity, address))
+        conn.execute('INSERT INTO poster_order (id, image_url, size, quantity, address, create_date) VALUES (?, ?, ?, ?, ?, ?)',
+                     (order_id, image_url, size, quantity, address, datetime.now()))
         conn.commit()
     else:
         conn.close()
@@ -302,11 +311,11 @@ def idempotent_Order(order_id, kind):
 def update_order_status(order_id, kind):
     conn = get_db_connection(ORDER_DATABASE_FILE)
     if kind == 'clothe':
-        conn.execute('UPDATE clothe_order SET payment_status = ? WHERE id = ?', (2, order_id))
+        conn.execute('UPDATE clothe_order SET payment_status = ?, pay_date = ? WHERE id = ?', (2, datetime.now(), order_id))
     elif kind == 'canvas':
-        conn.execute('UPDATE canvas_order SET payment_status = ? WHERE id = ?', (2, order_id))
+        conn.execute('UPDATE canvas_order SET payment_status = ?, pay_date = ? WHERE id = ?', (2, datetime.now(), order_id))
     elif kind == 'poster':
-        conn.execute('UPDATE poster_order SET payment_status = ? WHERE id = ?', (2, order_id))
+        conn.execute('UPDATE poster_order SET payment_status = ?, pay_date = ? WHERE id = ?', (2, datetime.now(), order_id))
     else:
         raise Exception
     conn.commit()
@@ -392,6 +401,12 @@ def create_checkout_session():
 
     return {'status': 'success', 'url': checkout_session.url}
 
+
+@app.route('/download-image', methods=['POST'])
+def download_image():
+    image_url = request.get_json()['imageUrl']
+    img_binary_data = requests.get(image_url).content
+    return Response(img_binary_data, mimetype='image/png')
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

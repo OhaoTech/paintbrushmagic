@@ -104,6 +104,7 @@ for (let name in modelPaths) {
 
 // Function to change the texture of the model from url
 function changeTextureFromUrl(imageUrl) {
+	console.log(imageUrl)
 	const textureLoader = new THREE.TextureLoader();
 	textureLoader.load(imageUrl, function (texture) {
 		console.log("Texture loaded", texture);
@@ -208,23 +209,26 @@ function getParameterByName(name, url) {
 
 // TODO: This function only fetches the localhost assets, can't fetch the outside website resource. This is a problem about CORS policy
 function getImageFromUrl(imageUrl) {
-	fetch(imageUrl)
-		.then(response => response.blob()) // 将响应转换为Blob对象
+	const server_url = "http://localhost:5000/download-image"
+	const  jsonData = {imageUrl: imageUrl}
+	fetch(server_url,{
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify(jsonData)
+	})
+		.then(response => {
+			return response.blob()
+		})// 将响应转换为Blob对象
 		.then(blob => {
-			// 创建一个新的FileReader对象
-			const reader = new FileReader();
-			reader.onload = function(event) {
-				const imageDataUrl=event.target.result
-				changeTextureFromUrl(imageDataUrl)
-			};
-			// 读取Blob对象中的数据
-			reader.readAsDataURL(blob);
+			changeTextureFromUrl(URL.createObjectURL(blob))
 		})
 		.catch(error => {
 			console.error('Error fetching image:', error);
 		});
 }
 const imageUrl = getParameterByName('image_url');
-getImageFromUrl(imageUrl)
+await getImageFromUrl(imageUrl)
 
 animate();
