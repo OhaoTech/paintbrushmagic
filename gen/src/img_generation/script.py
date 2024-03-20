@@ -2,8 +2,6 @@ import webbrowser
 
 import gradio as gr
 from openai import OpenAI
-# openai error handling
-
 
 import requests
 import io, os
@@ -20,6 +18,8 @@ RENDER_SERVER_DOMAIN = os.getenv('RENDER_SERVER_DOMAIN')
 
 # Initialize OpenAI client with your API key
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+SERVER_IP = os.getenv('SERVER_IP')
+GRADIO_SERVER_PORT = int(os.getenv('GRADIO_SERVER_PORT'))
 random_prompt = prompt.read_prompt()
 
 # variants about image generation
@@ -337,4 +337,4 @@ with gr.Blocks() as demo:
     )
 
 # Launch the Gradio interface
-demo.launch(share=True, server_port=7860)
+demo.launch(server_name=SERVER_IP, share=True, server_port=GRADIO_SERVER_PORT)

@@ -1,0 +1,13 @@
+# Changelog
+
+## 2024-03-20: Frank djmax96945147@gmail.com
+
+### Changed 
+- `kill.sh` and `run.sh`: Updated scripts for automatically running the service and shutdown.
+- `.env`: Added Gradio server IP (`0.0.0.0`) and its port configuration.
+- `src/img_generation/script.py`: Modified for mapping service to static IP.
+- `requirements.txt`: Fixed filename.
+- `dependency.sh`: Enhanced with more detailed dependency information.
+
+### Added
+- `stripe_webhook_white_ip.json`: Introduced new webhook configuration file.
