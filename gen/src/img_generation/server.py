@@ -169,9 +169,9 @@ def generate_file_dir():
     system = platform.system()
     now = datetime.now()
     if system == "Windows":
-        file_dir = f"D:/data/img/{now.year}{now.month}{now.day}/"
+        file_dir = f".\\data\\img\\{now.year}{now.month}{now.day}/"
     elif system == "Linux":
-        file_dir = f"/data/img/{now.year}{now.month}{now.day}/"
+        file_dir = f"./data/img/{now.year}{now.month}{now.day}/"
     else:
         raise Exception
     return file_dir

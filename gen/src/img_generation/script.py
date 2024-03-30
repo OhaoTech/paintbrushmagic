@@ -34,7 +34,7 @@ sizes = ["1024x1024", "1024x1792", "1792x1024"]
 qualities = ["standard", "hd"]
 
 # variants about order generation
-kind_list = ['clothe', 'canvas', 'poster']
+kind_list = ['hoodie', 'canvas', 'poster']
 clothe_size = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
 canvas_size = ['20x25', '30x40', '40x50', '60x80']
 poster_size = ['A1', 'A2', 'A3']
@@ -143,13 +143,23 @@ def generate(prompt, negative_prompt, style, size, quality, session_state):
     img, message, image_url = generate_image(prompt, negative_prompt, style, size, quality)
     return img, message, image_url
 
+#! this is not used
+# # jump to the render page
+# def jump_render_page(image_url):
+#     # TODO: pass the image url to the display page
+#     param = {'image_url': image_url}
+#     # running under express js server
+#     network.jump(RENDER_SERVER_DOMAIN, param=param, method='get')
 
-# jump to the render page
 def jump_render_page(image_url):
-    # TODO: pass the image url to the display page
-    param = {'image_url': image_url}
-    # running under express js server
-    network.jump(RENDER_SERVER_DOMAIN, param=param, method='get')
+    button_icon = "./public/🎁.png"
+    # This is the URL where the Node.js server will handle the GET request
+    redirect_url = f"http://localhost:5500/render?image_url={image_url}"
+    image_button = f'<a href="{redirect_url}" target="_blank"><img src="{button_icon}" alt="Image Description"></a>'
+    # the appearance of the button
+    return image_button
+
+
 
 
 # change display to order
@@ -257,9 +267,10 @@ with gr.Blocks() as demo:
     output_image = gr.Image(label="Your AI Generated Art")
     with gr.Row():
         image_url = gr.Textbox(
-            "https://oaidalleapiprodscus.blob.core.windows.net/private/org-sEbC9g0SYxi1GqsvDqWMNi6l/user-fmy5WrRtRPgJvvPdrS8CBJnC/img-ImftP3jWw50x0XabV3eLAEBI.png?st=2024-02-28T03%3A04%3A35Z&se=2024-02-28T05%3A04%3A35Z&sp=r&sv=2021-08-06&sr=b&rscd=inline&rsct=image/png&skoid=6aaadede-4fb3-4698-a8f6-684d7786b067&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2024-02-28T01%3A01%3A05Z&ske=2024-02-29T01%3A01%3A05Z&sks=b&skv=2021-08-06&sig=MxWKeBG54ok4OryjBVPIjCablO%2BmB6RvpikONUyhSm8%3D",
+            img_url,
             label="Image url", visible=False)
         show_btn = gr.Button("Show it!")
+        link_output = gr.HTML()  # Use gr.HTML to render the link as clickable
         buy_btn = gr.Button("Buy it!")
     prompts_left = gr.Label(get_prompts_left())
     get_more = gr.Button("Get more")
@@ -299,7 +310,7 @@ with gr.Blocks() as demo:
     show_btn.click(
         fn=jump_render_page,
         inputs=[image_url],
-        outputs=[]
+        outputs=[link_output]
     )
 
     buy_btn.click(

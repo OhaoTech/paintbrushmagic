@@ -139,7 +139,6 @@ function changeTextureFromUrl(imageUrl) {
 
 
 // Function to change the texture of the model from file
-// TODO: here is a bug: when I use url passing parameter, only post change to the new image, the others are still initial state.
 function changeTextureFromFile(imageFile) {
 	console.log("changeTexture called with:", imageFile.name);
 	changeTextureFromUrl(URL.createObjectURL(imageFile))
@@ -150,7 +149,7 @@ const pmremGenerator = new PMREMGenerator(renderer);
 pmremGenerator.compileEquirectangularShader();
 const exrLoader = new EXRLoader();
 exrLoader.setDataType(THREE.HalfFloatType);
-exrLoader.load('assets/4k.exr', function (texture) {
+exrLoader.load('assets/background/4k.exr', function (texture) {
 	const envMap = pmremGenerator.fromEquirectangular(texture).texture;
 	pmremGenerator.dispose();
 
@@ -196,39 +195,59 @@ function animate() {
 	renderer.render(scene, camera);
 }
 
+
+// Check for image_url query parameter on page load
+// window.addEventListener('load', () => {
+//     const params = new URLSearchParams(window.location.search);
+//     const imageUrl = params.get('image_url');
+//     if (imageUrl) {
+//         changeTextureFromUrl(imageUrl);
+//     }
+// });
+
+
 // Get the parameters in the URL
-function getParameterByName(name, url) {
-	if (!url) url = window.location.href;
-	name = name.replace(/[\[\]]/g, "\\$&");
-	const regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
-		results = regex.exec(url);
-	if (!results) return null;
-	if (!results[2]) return '';
-	return decodeURIComponent(results[2].replace(/\+/g, " "));
-}
+// function getParameterByName(name, url) {
+// 	if (!url) url = window.location.href;
+// 	name = name.replace(/[\[\]]/g, "\\$&");
+// 	const regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+// 		results = regex.exec(url);
+// 	if (!results) return null;
+// 	if (!results[2]) return '';
+// 	return decodeURIComponent(results[2].replace(/\+/g, " "));
+// }
 
 // TODO: This function only fetches the localhost assets, can't fetch the outside website resource. This is a problem about CORS policy
-function getImageFromUrl(imageUrl) {
-	const server_url = "http://localhost:5000/download-image"
-	const  jsonData = {imageUrl: imageUrl}
-	fetch(server_url,{
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json'
-		},
-		body: JSON.stringify(jsonData)
-	})
-		.then(response => {
-			return response.blob()
-		})// 将响应转换为Blob对象
-		.then(blob => {
-			changeTextureFromUrl(URL.createObjectURL(blob))
-		})
-		.catch(error => {
-			console.error('Error fetching image:', error);
-		});
-}
-const imageUrl = getParameterByName('image_url');
-await getImageFromUrl(imageUrl)
+// function getImageFromUrl(imageUrl) {
+// 	const server_url = "http://localhost:5000/download-image"
+// 	const  jsonData = {imageUrl: imageUrl}
+// 	fetch(server_url,{
+// 		method: 'POST',
+// 		headers: {
+// 			'Content-Type': 'application/json'
+// 		},
+// 		body: JSON.stringify(jsonData)
+// 	})
+// 		.then(response => {
+// 			return response.blob()
+// 		})// 将响应转换为Blob对象
+// 		.then(blob => {
+// 			changeTextureFromUrl(URL.createObjectURL(blob))
+// 		})
+// 		.catch(error => {
+// 			console.error('Error fetching image:', error);
+// 		});
+// }
+// const imageUrl = getParameterByName('image_url');
+// await getImageFromUrl(imageUrl)
+// Use the global variable defined in index.html
+
+window.addEventListener('load', () => {
+    // Use the 'initialTextureUrl' provided by the server
+    if (initialTextureUrl) {
+        changeTextureFromUrl(initialTextureUrl);
+    }
+});
+
 
 animate();
