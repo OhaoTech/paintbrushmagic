@@ -152,7 +152,7 @@ def add_image_generation_record():
             """, (url, local_url, prompt, style, ratio))
     conn.commit()
     conn.close()
-    return jsonify({'status': 'success'})
+    return jsonify({'status': 'success', 'local_url': local_url})
 
 
 def write_file(url):

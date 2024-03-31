@@ -63,17 +63,19 @@ def record_image_and_prompt(prompt, image_url, style, ratio):
     response = requests.post(IMAGE_SERVER_DOMAIN + '/add_image_record', json=param)
     if response.status_code != 200:
         # TODO: when image generation record save failed
-        pass
+        raise None
     else:
         # TODO: when image generation record save successfully
-        pass
+        param = response.json()
+        local_url = param['local_url']
+        return local_url
 
 
 def generate_image(prompt, negative_prompt, style, ratio, quality):
     # Check the number of prompts left by making a request to the Flask backend
     response = requests.get(IMAGE_SERVER_DOMAIN + '/get_prompts')
     if response.status_code != 200:
-        return None, "Error retrieving prompt count."
+        return None, "Error retrieving prompt count.", ""
     num_prompts = response.json()['prompts_left']
 
     if num_prompts > 0:
@@ -104,7 +106,13 @@ def generate_image(prompt, negative_prompt, style, ratio, quality):
             img = Image.open(io.BytesIO(img_binary_data))
 
             # Record image url and prompt
-            record_image_and_prompt(full_prompt, image_url, style, ratio)
+            local_url = record_image_and_prompt(full_prompt, image_url, style, ratio)
+
+            if local_url is None:
+                # TODO: when record failed
+                pass
+            else:
+                image_url = local_url
 
             # After successfully generating an image, update the prompt count by sending a POST request
             update_response = requests.post(IMAGE_SERVER_DOMAIN + '/update_prompts')
@@ -152,7 +160,7 @@ def generate(prompt, negative_prompt, style, size, quality, session_state):
 #     network.jump(RENDER_SERVER_DOMAIN, param=param, method='get')
 
 def jump_render_page(image_url):
-    button_icon = "./public/🎁.png"
+    button_icon = "./public/button.png"
     # This is the URL where the Node.js server will handle the GET request
     redirect_url = f"http://localhost:5500/render?image_url={image_url}"
     image_button = f'<a href="{redirect_url}" target="_blank"><img src="{button_icon}" alt="Image Description"></a>'
@@ -267,7 +275,7 @@ with gr.Blocks() as demo:
     output_image = gr.Image(label="Your AI Generated Art")
     with gr.Row():
         image_url = gr.Textbox(
-            img_url,
+            "",
             label="Image url", visible=False)
         show_btn = gr.Button("Show it!")
         link_output = gr.HTML()  # Use gr.HTML to render the link as clickable
