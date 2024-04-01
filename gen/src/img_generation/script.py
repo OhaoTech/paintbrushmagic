@@ -153,7 +153,7 @@ def generate(prompt, negative_prompt, style, size, quality, session_state):
 
 
 def jump_render_page(image_url):
-    button_icon = IMAGE_SERVER_DOMAIN + "public/button.png"  
+    button_icon = IMAGE_SERVER_DOMAIN + "/public/button.png"  
     # This is the URL where the Node.js server will handle the GET request
     redirect_url = RENDER_SERVER_DOMAIN+ "/render?image_url=" +IMAGE_SERVER_DOMAIN + f"/{image_url}"
     image_button = f"<a href={redirect_url} target='_blank'><img src={button_icon} alt='Click Me' style='width:20%; height:auto;'></a>"
