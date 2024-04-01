@@ -4,7 +4,7 @@ sudo apt install npm nodejs python3-pip
 
 root_dir=$(pwd)
 cd GL
-npm install express
+npm install express ejs
 
 cd -
 pip3 install -r requirements.txt
