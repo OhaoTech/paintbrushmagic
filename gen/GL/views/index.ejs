@@ -48,6 +48,17 @@
         var initialTextureUrl = '<%= imageUrl %>';
     </script>
     <script  type="module"  src="./js/app.js"></script> <!-- Link to your external JS file here -->
+    <div id="background-selector-container" style="position: fixed; bottom: 70px; left: 10px; padding: 10px; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; border-radius: 8px;">
+        <select id="background-selector" style="color: rgb(195, 2, 2); background: transparent; border: 1px solid white; padding: 8px 16px;">
+            <option value="forest.png">Forest</option>
+            <option value="golden_bay.png">Golden Bay</option>
+            <option value="quattro_canti.png">Quattro Canti</option>
+            <option value="satara_night.png">Satara Night</option>
+            <option value="studio_country_hall.png">Studio Country Hall</option>
+			<option value="fireplace.png">Fireplace</option>
+        </select>
+    </div>
+	
 	<div id="model-buttons" style="position: fixed; bottom: 10px; left: 10px; padding: 10px; background-color: rgba(0, 0, 0, 0.5);">
 		<button id="btnCanvas" onclick="toggleModel('canvas')">Canvas</button>
 		<button id="btnPoster" onclick="toggleModel('poster')">Poster</button>

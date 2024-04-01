@@ -104,20 +104,24 @@ function changeTextureFromFile(imageFile) {
 }
 
 
-const pmremGenerator = new PMREMGenerator(renderer);
-pmremGenerator.compileEquirectangularShader();
-const exrLoader = new EXRLoader();
-exrLoader.setDataType(THREE.HalfFloatType);
-exrLoader.load('assets/background/4k.exr', function (texture) {
-	const envMap = pmremGenerator.fromEquirectangular(texture).texture;
-	pmremGenerator.dispose();
+const textureLoader = new THREE.TextureLoader();
+textureLoader.load('assets/background/forest.png', function (texture) {
+    const envMap = texture;
 
-	texture.encoding = THREE.LinearSRGBColorSpace;
-	texture.mapping = THREE.EquirectangularReflectionMapping;
-	scene.environment = envMap;
-	scene.background = envMap;
-	updateLighting();
+    // Assuming the PNG is an equirectangular panorama, set the mapping accordingly
+    envMap.mapping = THREE.EquirectangularReflectionMapping;
+    envMap.encoding = THREE.NoColorSpace;
+
+    // Apply it as a background if needed
+    scene.background = envMap;
+
+    // Also set it as the environment for materials if you're using PBR materials
+    scene.environment = envMap;
+
+    // Update lighting if needed
+    updateLighting();
 });
+
 
 // Function to update lighting to use the environment map for reflections and illumination
 function updateLighting() {
@@ -169,5 +173,52 @@ function init(){
         changeTextureFromUrl(initialTextureUrl);
     }
 }
+document.getElementById('background-selector').addEventListener('change', function(event) {
+    const selectedBackground = event.target.value;
+    setBackground(selectedBackground);
+});
+
+function setBackground(imageFileName) {
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.load('assets/background/' + imageFileName, function (texture) {
+        texture.mapping = THREE.EquirectangularReflectionMapping;
+        texture.encoding = THREE.sRGBEncoding;
+
+        // Update the background
+        scene.background = texture;
+
+        // Regenerate the environment map for PBR materials
+        const pmremGenerator = new PMREMGenerator(renderer);
+        pmremGenerator.compileEquirectangularShader();
+
+        const rt = pmremGenerator.fromEquirectangular(texture);
+        pmremGenerator.dispose();
+
+        // Set the new texture as the environment map for the scene and all materials
+        scene.environment = rt.texture;
+
+        // Update the reflectance of all PBR materials in the scene
+        scene.traverse((obj) => {
+            if (obj.isMesh && obj.material && obj.material.isMeshStandardMaterial) {
+                obj.material.envMap = rt.texture;
+                obj.material.needsUpdate = true;
+            }
+        });
+
+        // If your materials are not of the standard type, ensure you set their envMap property accordingly.
+        // Update materials if they exist
+        [canvasMaterial, posterMaterial, hoodieMaterial].forEach(material => {
+            if (material && material.isMeshStandardMaterial) { // Check if it's a PBR material
+                material.envMap = rt.texture;
+                material.needsUpdate = true;
+            }
+        });
+
+        // Rerender the scene with the new environment
+        renderer.render(scene, camera);
+    });
+}
+
+
 init();
 animate();
