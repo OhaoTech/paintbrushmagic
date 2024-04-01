@@ -149,7 +149,7 @@ def get_prompts_left():
 # Define the event handler for the generate button
 def generate(prompt, negative_prompt, style, size, quality, session_state):
     img, message, image_url = generate_image(prompt, negative_prompt, style, size, quality)
-    return img, message, image_url
+    return img, message, image_url, jump_render_page(image_url)
 
 
 def jump_render_page(image_url):
@@ -299,7 +299,7 @@ with gr.Blocks(theme='Taithrah/Minimal') as demo:
     generate_btn.click(
         fn=generate,
         inputs=[prompt, negative_prompt, style, ratio, quality, session_state],
-        outputs=[output_image, prompts_left, image_url]
+        outputs=[output_image, prompts_left, image_url, link_output]
     )
     # Define the event handler for the "Surprise Me" button
     surprise_btn.click(
