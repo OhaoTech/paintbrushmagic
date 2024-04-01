@@ -18,12 +18,12 @@ dotenv.load_dotenv("../../.env")
 prompt_free_times = os.getenv("PROMPT_FREE_TIMES")
 FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY")
 IMAGE_SERVER_DOMAIN = os.getenv("IMAGE_SERVER_DOMAIN")
-ALL_IP = os.getenv("ALL_IP")
+HOST_IP = os.getenv("HOST_IP")
 MODE = os.getenv('MODE', 'server')
 
 if MODE == 'local':
     IMAGE_SERVER_DOMAIN = "http://127.0.0.1:5000"
-    ALL_IP = '127.0.0.1'
+    HOST_IP = '127.0.0.1'
     # Any other configurations that need to be set for local mode
 
 stripe.api_key = os.getenv("STRIPE_API_KEY")
@@ -421,4 +421,4 @@ def serve_public_file(filename):
     return send_from_directory('public', filename)
 
 if __name__ == '__main__':
-    app.run(host=ALL_IP, debug=False, port=5000)
+    app.run(host=HOST_IP, debug=False, port=5000)
