@@ -2,24 +2,28 @@ import webbrowser
 
 import gradio as gr
 from openai import OpenAI
-
-import requests
-import io, os
-import dotenv
+import requests,io, os, dotenv
 from PIL import Image
-import random
-import prompt
-import network
+import random, prompt
 
 # Load the environment variables from the .env file
 dotenv.load_dotenv()
 IMAGE_SERVER_DOMAIN = os.getenv('IMAGE_SERVER_DOMAIN')
 RENDER_SERVER_DOMAIN = os.getenv('RENDER_SERVER_DOMAIN')
-
+SERVER_EXTERNAL_IP = os.getenv('SERVER_EXTERNAL_IP')
 # Initialize OpenAI client with your API key
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-SERVER_IP = os.getenv('SERVER_IP')
+ALL_IP = os.getenv('ALL_IP')
 GRADIO_SERVER_PORT = int(os.getenv('GRADIO_SERVER_PORT'))
+MODE = os.getenv('MODE', 'server')
+
+if MODE == 'local':
+    RENDER_SERVER_DOMAIN = 'http://127.0.0.1:5500'
+    IMAGE_SERVER_DOMAIN = "http://127.0.0.1:5000"
+    ALL_IP = '127.0.0.1'
+    # Any other configurations that need to be set for local mode
+
+
 random_prompt = prompt.read_prompt()
 
 # variants about image generation
@@ -153,9 +157,9 @@ def generate(prompt, negative_prompt, style, size, quality, session_state):
 
 
 def jump_render_page(image_url):
-    button_icon = IMAGE_SERVER_DOMAIN + "/public/button.png"  
+    button_icon = "http://" + ALL_IP + ":5000/public/button.png"  
     # This is the URL where the Node.js server will handle the GET request
-    redirect_url = RENDER_SERVER_DOMAIN+ "/render?image_url=" +IMAGE_SERVER_DOMAIN + f"/{image_url}"
+    redirect_url = RENDER_SERVER_DOMAIN+ "/render?image_url=http://" +SERVER_EXTERNAL_IP + f":5000/{image_url}"
     image_button = f"<a href={redirect_url} target='_blank'><img src={button_icon} alt='Click Me' style='width:20%; height:auto;'></a>"
     # the appearance of the button
     return image_button
@@ -349,4 +353,4 @@ with gr.Blocks(theme='Taithrah/Minimal') as demo:
     )
 
 # Launch the Gradio interface
-demo.launch(server_name=SERVER_IP, share=True, server_port=GRADIO_SERVER_PORT)
+demo.launch(server_name=ALL_IP, share=True, server_port=GRADIO_SERVER_PORT)

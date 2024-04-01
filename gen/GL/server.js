@@ -17,5 +17,5 @@ app.get('/render', (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`WebGL app listening at http://localhost:${port}`);
+    console.log(`WebGL app listening at port: ${port}`);
 });
