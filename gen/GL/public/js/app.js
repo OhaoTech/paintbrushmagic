@@ -45,96 +45,55 @@ let pendingTexture = null;
 const loader = new GLTFLoader().setPath('./');
 
 function loadModel(modelName, path) {
-	loader.load(path, function (gltf) {
-		models[modelName] = gltf.scene;
-		models[modelName].visible = false;
-		scene.add(gltf.scene);
-
-		if (modelName === 'canvas') {
-			models['canvas'].visible = true;
-			gltf.scene.position.set(0, 0, -1);
-		}
-		if (modelName === 'poster') {
-			gltf.scene.position.set(0, 0, -2);
-		}
-		if (modelName === 'hoodie') {//scale up
-			gltf.scene.position.set(0, 0, -1);
-			gltf.scene.scale.set(1.3, 1.3, 1.3);
-		}
-
+    loader.load(path, function (gltf) {
+        models[modelName] = gltf.scene;
+        models[modelName].visible = modelName === 'canvas'; // make canvas visible by default
+        scene.add(gltf.scene);
 		gltf.scene.rotation.set(0, -Math.PI / 2, 0);
-		gltf.scene.traverse(function (child) {
-			//mesh name is "Plane", "Chest" or "poster_mesh" simultaneously
-			if (child.isMesh && child.name === "Plane") {
-				canvasMaterial = child.material;
-				if (pendingTexture) {
-					canvasMaterial.map = pendingTexture;
-					canvasMaterial.needsUpdate = true;
-					pendingTexture = null;
-				}
-			}
+        gltf.scene.traverse(function (child) {
+            if (child.isMesh) {
+                let material;
+                if (child.name === "Plane") {
+                    material = canvasMaterial = child.material;
+					gltf.scene.position.set(0, 0, -1);
+                } else if (child.name === "poster_mesh") {
+                    material = posterMaterial = child.material;
+					gltf.scene.position.set(0, 0, -2);
+                } else if (child.name === "chest") {
+                    material = hoodieMaterial = child.material;
+					gltf.scene.position.set(0, 0, -1);
+					gltf.scene.scale.set(1.3, 1.3, 1.3);
+                }
 
-			if (child.isMesh && child.name === "poster_mesh") {
-				posterMaterial = child.material;
-				if (pendingTexture) {
-					posterMaterial.map = pendingTexture;
-					posterMaterial.needsUpdate = true;
-					pendingTexture = null;
-				}
-			}
-
-			if (child.isMesh && child.name === "chest") {
-				hoodieMaterial = child.material;
-				if (pendingTexture) {
-					hoodieMaterial.map = pendingTexture;
-					hoodieMaterial.needsUpdate = true;
-					pendingTexture = null;
-				}
-			}
-
-		}, undefined, function (error) {
-			console.error("Error loading model ${modelName}", error);
-		});
-	});
+                if (material && pendingTexture) {
+                    material.map = pendingTexture;
+                    material.needsUpdate = true;
+                }
+            }
+        });
+    }, undefined, function (error) {
+        console.error(`Error loading model ${modelName}:`, error);
+    });
 }
 
-for (let name in modelPaths) {
-	loadModel(name, modelPaths[name]);
-}
-
-// Function to change the texture of the model from url
 function changeTextureFromUrl(imageUrl) {
-	console.log(imageUrl)
-	const textureLoader = new THREE.TextureLoader();
-	textureLoader.load(imageUrl, function (texture) {
-		console.log("Texture loaded", texture);
-		// Rotate the texture by 180 degrees
-		texture.center.set(0.5, 0.5); // Set the center of rotation to the center of the texture
-		texture.rotation = Math.PI; // Rotate the texture by 180 degrees (Math.PI radians)
+    console.log("Loading texture from URL:", imageUrl);
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.load(imageUrl, function (texture) {
+        console.log("Texture loaded", texture);
+        texture.center.set(0.5, 0.5); // Set the center of rotation to the center of the texture
+        texture.rotation = Math.PI; // Rotate the texture by 180 degrees
 
+        pendingTexture = texture; // Set the pending texture
 
-		if (canvasMaterial) {
-			canvasMaterial.map = texture;
-			canvasMaterial.needsUpdate = true;
-		} else {
-			pendingTexture = texture;
-		}
-
-		if (posterMaterial) {
-			posterMaterial.map = texture;
-			posterMaterial.needsUpdate = true;
-		} else {
-			pendingTexture = texture;
-		}
-
-		if (hoodieMaterial) {
-			hoodieMaterial.map = texture;
-			hoodieMaterial.needsUpdate = true;
-		} else {
-			pendingTexture = texture;
-		}
-
-	});
+        // Update materials if they exist
+        [canvasMaterial, posterMaterial, hoodieMaterial].forEach(material => {
+            if (material) {
+                material.map = texture;
+                material.needsUpdate = true;
+            }
+        });
+    });
 }
 
 
@@ -184,70 +143,31 @@ function changeVisibleModel(visibleModelName) {
 	for (let name in models) {
 		if (models[name]) models[name].visible = (name === visibleModelName);
 	}
-	renderer.render(scene, camera);
 }
 
 
 // Render loop
+let then = performance.now();
 function animate() {
-	requestAnimationFrame(animate);
-	controls.update();
-	renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+    
+    const now = performance.now();
+    const elapsed = now - then;
+
+    if (elapsed > (1000 / 24)) { // Throttle to 24fps
+        controls.update();
+        renderer.render(scene, camera);
+        then = now;
+    }
 }
 
-
-// Check for image_url query parameter on page load
-// window.addEventListener('load', () => {
-//     const params = new URLSearchParams(window.location.search);
-//     const imageUrl = params.get('image_url');
-//     if (imageUrl) {
-//         changeTextureFromUrl(imageUrl);
-//     }
-// });
-
-
-// Get the parameters in the URL
-// function getParameterByName(name, url) {
-// 	if (!url) url = window.location.href;
-// 	name = name.replace(/[\[\]]/g, "\\$&");
-// 	const regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
-// 		results = regex.exec(url);
-// 	if (!results) return null;
-// 	if (!results[2]) return '';
-// 	return decodeURIComponent(results[2].replace(/\+/g, " "));
-// }
-
-// TODO: This function only fetches the localhost assets, can't fetch the outside website resource. This is a problem about CORS policy
-// function getImageFromUrl(imageUrl) {
-// 	const server_url = "http://localhost:5000/download-image"
-// 	const  jsonData = {imageUrl: imageUrl}
-// 	fetch(server_url,{
-// 		method: 'POST',
-// 		headers: {
-// 			'Content-Type': 'application/json'
-// 		},
-// 		body: JSON.stringify(jsonData)
-// 	})
-// 		.then(response => {
-// 			return response.blob()
-// 		})// 将响应转换为Blob对象
-// 		.then(blob => {
-// 			changeTextureFromUrl(URL.createObjectURL(blob))
-// 		})
-// 		.catch(error => {
-// 			console.error('Error fetching image:', error);
-// 		});
-// }
-// const imageUrl = getParameterByName('image_url');
-// await getImageFromUrl(imageUrl)
-// Use the global variable defined in index.html
-
-window.addEventListener('load', () => {
-    // Use the 'initialTextureUrl' provided by the server
-    if (initialTextureUrl) {
+function init(){
+	for (let name in modelPaths) {
+		loadModel(name, modelPaths[name]);
+	}
+	if (initialTextureUrl) {
         changeTextureFromUrl(initialTextureUrl);
     }
-});
-
-
+}
+init();
 animate();
