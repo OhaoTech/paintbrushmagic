@@ -35,7 +35,7 @@ qualities = ["standard", "hd"]
 
 # variants about order generation
 kind_list = ['hoodie', 'canvas', 'poster']
-clothe_size = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
+hoodie_size = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
 canvas_size = ['20x25', '30x40', '40x50', '60x80']
 poster_size = ['A1', 'A2', 'A3']
 color_list = ['white', 'red', 'green', 'blue', 'black']
@@ -151,19 +151,12 @@ def generate(prompt, negative_prompt, style, size, quality, session_state):
     img, message, image_url = generate_image(prompt, negative_prompt, style, size, quality)
     return img, message, image_url
 
-#! this is not used
-# # jump to the render page
-# def jump_render_page(image_url):
-#     # TODO: pass the image url to the display page
-#     param = {'image_url': image_url}
-#     # running under express js server
-#     network.jump(RENDER_SERVER_DOMAIN, param=param, method='get')
 
 def jump_render_page(image_url):
-    button_icon = "./public/button.png"
+    button_icon = IMAGE_SERVER_DOMAIN + "public/button.png"  
     # This is the URL where the Node.js server will handle the GET request
-    redirect_url = f"http://localhost:5500/render?image_url={image_url}"
-    image_button = f'<a href="{redirect_url}" target="_blank"><img src="{button_icon}" alt="Image Description"></a>'
+    redirect_url = RENDER_SERVER_DOMAIN+ "/render?image_url=" +IMAGE_SERVER_DOMAIN + f"/{image_url}"
+    image_button = f"<a href={redirect_url} target='_blank'><img src={button_icon} alt='Click Me' style='width:20%; height:auto;'></a>"
     # the appearance of the button
     return image_button
 
@@ -202,8 +195,8 @@ def add_prompts(session_state):
 
 
 def change_size_dropdown(kind):
-    if kind == 'clothe':
-        return gr.Dropdown(label="Size", choices=clothe_size, value='M'), gr.Dropdown(interactive=True, visible=True)
+    if kind == 'hoodie':
+        return gr.Dropdown(label="Size", choices=hoodie_size, value='M'), gr.Dropdown(interactive=True, visible=True)
     elif kind == 'canvas':
         return gr.Dropdown(label="Size(cm)", choices=canvas_size, value=canvas_size[0], interactive=True), gr.Dropdown(
             visible=False)
@@ -216,7 +209,7 @@ def generate_order(image_url, kind, size, color, quantity, address):
     if address is None or address == '':
         return "address must not be null"
 
-    if kind == 'clothe':
+    if kind == 'hoodie':
         order_data = {'kind': kind, 'image_url': image_url, 'size': size, 'color': color, 'quantity': quantity,
                       'address': address}
     elif kind == 'canvas':
@@ -256,7 +249,7 @@ def create_checkout_session(order_id, kind, quantity):
 
 
 # Create the Gradio interface
-with gr.Blocks() as demo:
+with gr.Blocks(theme='Taithrah/Minimal') as demo:
     generation_title = gr.Markdown("<h1>Create your AI art</h1>", visible=True)
     order_title = gr.Markdown("<h1>Check your order</h1>", visible=False)
 
@@ -286,10 +279,10 @@ with gr.Blocks() as demo:
     generated_style = gr.Textbox(label="Generated style", visible=False)
 
     with gr.Row():
-        kind = gr.Dropdown(label="What kind of things you want to buy", choices=kind_list, value='clothe',
+        kind = gr.Dropdown(label="What kind of things you want to buy", choices=kind_list, value='hoodie',
                            interactive=True, visible=False)
-        size = gr.Dropdown(label="Size", choices=clothe_size, value='M', interactive=True, visible=False)
-        color = gr.Dropdown(label="Clothe Color", choices=color_list, value=color_list[0], interactive=True,
+        size = gr.Dropdown(label="Size", choices=hoodie_size, value='M', interactive=True, visible=False)
+        color = gr.Dropdown(label="Hoodie Color", choices=color_list, value=color_list[0], interactive=True,
                             visible=False)
         quantity = gr.Number(label="Quantity", value=1, minimum=1, interactive=True, visible=False)
     with gr.Row():

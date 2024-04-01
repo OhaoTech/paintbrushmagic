@@ -169,9 +169,9 @@ def generate_file_dir():
     system = platform.system()
     now = datetime.now()
     if system == "Windows":
-        file_dir = f".\\data\\img\\{now.year}{now.month}{now.day}/"
+        file_dir = f"public/data/img/{now.year}{now.month}{now.day}/"
     elif system == "Linux":
-        file_dir = f"./data/img/{now.year}{now.month}{now.day}/"
+        file_dir = f"public/data/img/{now.year}{now.month}{now.day}/"
     else:
         raise Exception
     return file_dir
@@ -408,5 +408,9 @@ def download_image():
     img_binary_data = requests.get(image_url).content
     return Response(img_binary_data, mimetype='image/png')
 
+from flask import send_from_directory
+@app.route('/public/<path:filename>')
+def serve_public_file(filename):
+    return send_from_directory('public', filename)
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
