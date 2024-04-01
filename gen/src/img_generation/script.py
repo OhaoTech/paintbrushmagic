@@ -156,7 +156,7 @@ def jump_render_page(image_url):
     button_icon = IMAGE_SERVER_DOMAIN + "/public/button.png"  
     # This is the URL where the Node.js server will handle the GET request
     redirect_url = RENDER_SERVER_DOMAIN+ "/render?image_url=" +IMAGE_SERVER_DOMAIN + f"/{image_url}"
-    image_button = f"<a href={redirect_url} target='_blank'><img src={button_icon} alt='Click Me' style='width:20%; height:auto;'></a>"
+    image_button = f"<a href={redirect_url} target='_blank'><img src={button_icon} alt='Click Me' style='width:10%; height:auto;'></a>"
     # the appearance of the button
     return image_button
 
@@ -170,17 +170,17 @@ def change_to_order_display():
         visible=False), gr.Button(visible=False), gr.Label(visible=False), gr.Button(visible=False), gr.Dropdown(
         visible=True), gr.Dropdown(visible=True), gr.Dropdown(visible=True), gr.Textbox(visible=True), gr.Button(
         visible=True), gr.Button(visible=True), gr.Number(visible=True), gr.Markdown(visible=False), gr.Markdown(
-        visible=True)
+        visible=True), gr.HTML(visible=False)
 
 
 # change display to image generation
 def change_to_generation_display():
     return gr.Textbox(visible=True), gr.Textbox(visible=True), gr.Dropdown(visible=True), gr.Dropdown(
         visible=True), gr.Dropdown(visible=True), gr.Button(visible=True), gr.Button(visible=True), gr.Button(
-        visible=True), gr.Button(visible=True), gr.Label(visible=True), gr.Button(visible=True), gr.Dropdown(
+        visible=False), gr.Button(visible=True), gr.Label(visible=True), gr.Button(visible=True), gr.Dropdown(
         visible=False), gr.Dropdown(visible=False), gr.Dropdown(visible=False), gr.Textbox(visible=False), gr.Button(
         visible=False), gr.Button(visible=False), gr.Number(visible=False), gr.Markdown(visible=True), gr.Markdown(
-        visible=False)
+        visible=False), gr.HTML(visible=True)
 
 
 # Logic to add more prompts when "Get more" is clicked
@@ -270,8 +270,8 @@ with gr.Blocks(theme='Taithrah/Minimal') as demo:
         image_url = gr.Textbox(
             "",
             label="Image url", visible=False)
-        show_btn = gr.Button("Show it!")
-        link_output = gr.HTML()  # Use gr.HTML to render the link as clickable
+        show_btn = gr.Button("Show it!", visible=False)
+        link_output = gr.HTML(f"<a href={RENDER_SERVER_DOMAIN+ '/render?image_url='} target='_blank'><img src={IMAGE_SERVER_DOMAIN + '/public/button.png'} alt='Click Me' style='width:10%; height:auto;'></a>")  # Use gr.HTML to render the link as clickable
         buy_btn = gr.Button("Buy it!")
     prompts_left = gr.Label(get_prompts_left())
     get_more = gr.Button("Get more")
@@ -319,7 +319,7 @@ with gr.Blocks(theme='Taithrah/Minimal') as demo:
         inputs=[],
         outputs=[prompt, negative_prompt, style, ratio, quality, generate_btn, surprise_btn, show_btn, buy_btn,
                  prompts_left, get_more, kind, size, color, address, pay_btn, back_btn, quantity, generation_title,
-                 order_title]
+                 order_title, link_output]
     )
 
     back_btn.click(
@@ -327,7 +327,7 @@ with gr.Blocks(theme='Taithrah/Minimal') as demo:
         inputs=[],
         outputs=[prompt, negative_prompt, style, ratio, quality, generate_btn, surprise_btn, show_btn, buy_btn,
                  prompts_left, get_more, kind, size, color, address, pay_btn, back_btn, quantity, generation_title,
-                 order_title]
+                 order_title, link_output]
     )
 
     get_more.click(
