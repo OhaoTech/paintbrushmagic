@@ -18,6 +18,13 @@ dotenv.load_dotenv("../../.env")
 prompt_free_times = os.getenv("PROMPT_FREE_TIMES")
 FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY")
 IMAGE_SERVER_DOMAIN = os.getenv("IMAGE_SERVER_DOMAIN")
+HOST_IP = os.getenv("HOST_IP")
+MODE = os.getenv('MODE', 'server')
+
+if MODE == 'local':
+    IMAGE_SERVER_DOMAIN = "http://127.0.0.1:5000"
+    HOST_IP = '127.0.0.1'
+    # Any other configurations that need to be set for local mode
 
 stripe.api_key = os.getenv("STRIPE_API_KEY")
 # If you are testing your webhook locally with the Stripe CLI you
@@ -28,7 +35,7 @@ app = Flask(__name__,
             static_url_path='',
             static_folder='public')
 CORS(app)
-app.secret_key = FLASK_SECRET_KEY
+# app.secret_key = FLASK_SECRET_KEY
 
 # Database setup
 PROMPT_DATABASE_FILE = 'user_prompts.db'
@@ -262,7 +269,7 @@ def generate_order():
     # if get database last insert id maybe occur concurrent problem, so use snowflake generate order id
     order_id = next(gen)
     conn = get_db_connection(ORDER_DATABASE_FILE)
-    if kind == 'clothe':
+    if kind == 'hoodie':
         color = data['color']
         conn.execute(
             'INSERT INTO clothe_order (id, image_url, color, size, quantity, address, create_date) VALUES (?, ?, ?, ?, ?, ?, ?)',
@@ -412,5 +419,6 @@ from flask import send_from_directory
 @app.route('/public/<path:filename>')
 def serve_public_file(filename):
     return send_from_directory('public', filename)
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(host=HOST_IP, debug=False, port=5000)

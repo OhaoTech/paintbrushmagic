@@ -20,7 +20,6 @@ app = Flask(__name__,
             static_folder='public')
 
 STRIPE_DOMAIN = os.getenv("STRIPE_DOMAIN")
-pr_123 = 123
 @app.route('/create-checkout-session', methods=['GET'])
 def create_checkout_session():
     try:
