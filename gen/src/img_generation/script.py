@@ -2,9 +2,10 @@ import webbrowser
 
 import gradio as gr
 from openai import OpenAI
-import requests,io, os, dotenv
+import requests, io, os, dotenv
 from PIL import Image
 import random, prompt
+import country_info
 
 # Load the environment variables from the .env file
 dotenv.load_dotenv()
@@ -14,6 +15,7 @@ SERVER_IP = os.getenv('SERVER_IP')
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 HOST_IP = os.getenv('HOST_IP')
 GRADIO_SERVER_PORT = int(os.getenv('GRADIO_SERVER_PORT'))
+RENDER_SERVER_DOMAIN = os.getenv('RENDER_SERVER_DOMAIN')
 MODE = os.getenv('MODE', 'server')
 
 if MODE == 'local':
@@ -21,7 +23,6 @@ if MODE == 'local':
     HOST_IP = '127.0.0.1'
     SERVER_IP = '127.0.0.1'
     # Any other configurations that need to be set for local mode
-
 
 random_prompt = prompt.read_prompt()
 
@@ -42,7 +43,8 @@ hoodie_size = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
 canvas_size = ['20x25', '30x40', '40x50', '60x80']
 poster_size = ['A1', 'A2', 'A3']
 color_list = ['white', 'red', 'green', 'blue', 'black']
-
+country_en_name_list = country_info.country_en_name_list
+country_phone_codes_map_list = country_info.country_phone_codes_map_list
 
 def generate_prompt(prompt, negative_prompt, style):
     if negative_prompt is None or negative_prompt == '':
@@ -156,14 +158,12 @@ def generate(prompt, negative_prompt, style, size, quality, session_state):
 
 
 def jump_render_page(image_url):
-    button_icon = "http://" + SERVER_IP + ":5000/public/button.png"  
+    button_icon = "http://" + SERVER_IP + ":5000/public/button.png"
     # This is the URL where the Node.js server will handle the GET request
-    redirect_url = f"http://{SERVER_IP}:5500"+ "/render?image_url=http://" +SERVER_IP + f":5000/{image_url}"
+    redirect_url = f"http://{SERVER_IP}:5500" + "/render?image_url=http://" + SERVER_IP + f":5000/{image_url}"
     image_button = f"<a href={redirect_url} target='_blank'><img src={button_icon} alt='Click Me' style='width:20%; height:auto;'></a>"
     # the appearance of the button
     return image_button
-
-
 
 
 # change display to order
@@ -173,7 +173,8 @@ def change_to_order_display():
         visible=False), gr.Button(visible=False), gr.Label(visible=False), gr.Button(visible=False), gr.Dropdown(
         visible=True), gr.Dropdown(visible=True), gr.Dropdown(visible=True), gr.Textbox(visible=True), gr.Button(
         visible=True), gr.Button(visible=True), gr.Number(visible=True), gr.Markdown(visible=False), gr.Markdown(
-        visible=True), gr.HTML(visible=False)
+        visible=True), gr.HTML(visible=False), gr.Dropdown(visible=True), gr.Textbox(visible=True), gr.Textbox(
+        visible=True), gr.Dropdown(visible=True), gr.Textbox(visible=True)
 
 
 # change display to image generation
@@ -183,7 +184,8 @@ def change_to_generation_display():
         visible=False), gr.Button(visible=True), gr.Label(visible=True), gr.Button(visible=True), gr.Dropdown(
         visible=False), gr.Dropdown(visible=False), gr.Dropdown(visible=False), gr.Textbox(visible=False), gr.Button(
         visible=False), gr.Button(visible=False), gr.Number(visible=False), gr.Markdown(visible=True), gr.Markdown(
-        visible=False), gr.HTML(visible=True)
+        visible=False), gr.HTML(visible=True), gr.Dropdown(visible=False), gr.Textbox(visible=False), gr.Textbox(
+        visible=False), gr.Dropdown(visible=False), gr.Textbox(visible=False)
 
 
 # Logic to add more prompts when "Get more" is clicked
@@ -274,7 +276,8 @@ with gr.Blocks(theme='Taithrah/Minimal') as demo:
             "",
             label="Image url", visible=False)
         show_btn = gr.Button("Show it!", visible=False)
-        link_output = gr.HTML(f"<a href={RENDER_SERVER_DOMAIN+ '/render?image_url='} target='_blank'><img src={IMAGE_SERVER_DOMAIN + '/public/button.png'} alt='Click Me' style='width:10%; height:auto;'></a>")  # Use gr.HTML to render the link as clickable
+        link_output = gr.HTML(
+            f"<a href={RENDER_SERVER_DOMAIN + '/render?image_url='} target='_blank'><img src={IMAGE_SERVER_DOMAIN + '/public/button.png'} alt='Click Me' style='width:10%; height:auto;'></a>")  # Use gr.HTML to render the link as clickable
         buy_btn = gr.Button("Buy it!")
     prompts_left = gr.Label(get_prompts_left())
     get_more = gr.Button("Get more")
@@ -282,15 +285,25 @@ with gr.Blocks(theme='Taithrah/Minimal') as demo:
     generated_style = gr.Textbox(label="Generated style", visible=False)
 
     with gr.Row():
-        kind = gr.Dropdown(label="What kind of things you want to buy", choices=kind_list, value='hoodie',
+        kind = gr.Dropdown(label="What kind of things you want to buy", choices=kind_list, value=kind_list[0],
                            interactive=True, visible=False)
-        size = gr.Dropdown(label="Size", choices=hoodie_size, value='M', interactive=True, visible=False)
+        size = gr.Dropdown(label="Size", choices=hoodie_size, value=hoodie_size[0], interactive=True, visible=False)
         color = gr.Dropdown(label="Hoodie Color", choices=color_list, value=color_list[0], interactive=True,
                             visible=False)
         quantity = gr.Number(label="Quantity", value=1, minimum=1, interactive=True, visible=False)
-    with gr.Row():
-        address = gr.Textbox(label="Your address", placeholder="somewhere you want to receive the package",
-                             interactive=True, visible=False)
+    with gr.Column():
+        order_country = gr.Dropdown(label="Country/Region", value='Sweden', choices=country_en_name_list,
+                                    interactive=True, visible=False)
+        with gr.Row():
+            order_first_name = gr.Textbox(label="First Name", placeholder="Your first name", interactive=True,
+                                          visible=False)
+            order_last_name = gr.Textbox(label="Last Name", placeholder="Your last name", interactive=True, visible=False)
+        with gr.Row():
+            order_phone_code = gr.Dropdown(label="Phone Code", value=country_phone_codes_map_list[country_en_name_list.index('Sweden')], choices=country_phone_codes_map_list, interactive=True, visible=False)
+            order_phone_number = gr.Textbox(label="Phone Number", placeholder="Your phone number", interactive=True,
+                                        visible=False)
+        order_address = gr.Textbox(label="Your address", placeholder="somewhere you want to receive the package",
+                                   interactive=True, visible=False)
     with gr.Row():
         addressTip = gr.Label()
     with gr.Row():
@@ -321,16 +334,18 @@ with gr.Blocks(theme='Taithrah/Minimal') as demo:
         fn=change_to_order_display,
         inputs=[],
         outputs=[prompt, negative_prompt, style, ratio, quality, generate_btn, surprise_btn, show_btn, buy_btn,
-                 prompts_left, get_more, kind, size, color, address, pay_btn, back_btn, quantity, generation_title,
-                 order_title, link_output]
+                 prompts_left, get_more, kind, size, color, order_address, pay_btn, back_btn, quantity,
+                 generation_title,
+                 order_title, link_output, order_country, order_first_name, order_last_name, order_phone_code, order_phone_number]
     )
 
     back_btn.click(
         fn=change_to_generation_display,
         inputs=[],
         outputs=[prompt, negative_prompt, style, ratio, quality, generate_btn, surprise_btn, show_btn, buy_btn,
-                 prompts_left, get_more, kind, size, color, address, pay_btn, back_btn, quantity, generation_title,
-                 order_title, link_output]
+                 prompts_left, get_more, kind, size, color, order_address, pay_btn, back_btn, quantity,
+                 generation_title,
+                 order_title, link_output, order_country, order_first_name, order_last_name, order_phone_code, order_phone_number]
     )
 
     get_more.click(
