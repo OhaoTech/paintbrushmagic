@@ -24,6 +24,11 @@ if MODE == 'local':
     SERVER_IP = '127.0.0.1'
     # Any other configurations that need to be set for local mode
 
+# Button and Links    
+BUTTON_ICON = "http://" + SERVER_IP + ":5000/public/button.png"
+BASE_REDIRECT_URL = f"http://{SERVER_IP}:5500" + "/render?image_url=http://" + SERVER_IP + f":5000/"
+
+
 random_prompt = prompt.read_prompt()
 
 # variants about image generation
@@ -158,10 +163,9 @@ def generate(prompt, negative_prompt, style, size, quality, session_state):
 
 
 def jump_render_page(image_url):
-    button_icon = "http://" + SERVER_IP + ":5000/public/button.png"
     # This is the URL where the Node.js server will handle the GET request
-    redirect_url = f"http://{SERVER_IP}:5500" + "/render?image_url=http://" + SERVER_IP + f":5000/{image_url}"
-    image_button = f"<a href={redirect_url} target='_blank'><img src={button_icon} alt='Click Me' style='width:20%; height:auto;'></a>"
+    redirect_url = BASE_REDIRECT_URL + f"{image_url}"
+    image_button = f"<a href={redirect_url} target='_blank'><img src={BUTTON_ICON} alt='Click Me' style='width:20%; height:auto;'></a>"
     # the appearance of the button
     return image_button
 
@@ -277,7 +281,7 @@ with gr.Blocks(theme='Taithrah/Minimal') as demo:
             label="Image url", visible=False)
         show_btn = gr.Button("Show it!", visible=False)
         link_output = gr.HTML(
-            f"<a href={RENDER_SERVER_DOMAIN + '/render?image_url='} target='_blank'><img src={IMAGE_SERVER_DOMAIN + '/public/button.png'} alt='Click Me' style='width:10%; height:auto;'></a>")  # Use gr.HTML to render the link as clickable
+            f"<a href={BASE_REDIRECT_URL} target='_blank'><img src={BUTTON_ICON} alt='Click Me' style='width:10%; height:auto;'></a>")  # Use gr.HTML to render the link as clickable
         buy_btn = gr.Button("Buy it!")
     prompts_left = gr.Label(get_prompts_left())
     get_more = gr.Button("Get more")
@@ -362,7 +366,7 @@ with gr.Blocks(theme='Taithrah/Minimal') as demo:
 
     pay_btn.click(
         fn=generate_order,
-        inputs=[image_url, kind, size, color, quantity, address],
+        inputs=[image_url, kind, size, color, quantity, addressTip],
         outputs=[addressTip]
     )
 
