@@ -172,25 +172,67 @@ def jump_render_page(image_url):
 
 # change display to order
 def change_to_order_display():
-    return gr.Textbox(visible=False), gr.Textbox(visible=False), gr.Dropdown(visible=False), gr.Dropdown(
-        visible=False), gr.Dropdown(visible=False), gr.Button(visible=False), gr.Button(visible=False), gr.Button(
-        visible=False), gr.Button(visible=False), gr.Label(visible=False), gr.Button(visible=False), gr.Dropdown(
-        visible=True), gr.Dropdown(visible=True), gr.Dropdown(visible=True), gr.Textbox(visible=True), gr.Button(
-        visible=True), gr.Button(visible=True), gr.Number(visible=True), gr.Markdown(visible=False), gr.Markdown(
-        visible=True), gr.HTML(visible=False), gr.Dropdown(visible=True), gr.Textbox(visible=True), gr.Textbox(
-        visible=True), gr.Dropdown(visible=True), gr.Textbox(visible=True)
-
+    return (
+        gr.Textbox(visible=False),  # Original prompt textbox
+        gr.Textbox(visible=False),  # Negative prompt textbox
+        gr.Dropdown(visible=False),  # Style dropdown
+        gr.Dropdown(visible=False),  # Image ratio dropdown
+        gr.Dropdown(visible=False),  # Image quality dropdown
+        gr.Button(visible=False),  # Generate image button
+        gr.Button(visible=False),  # Surprise me button
+        gr.Button(visible=False),  # Show button
+        gr.Button(visible=False),  # Buy button (hidden when showing order)
+        gr.Label(visible=False),  # Prompts left label
+        gr.Button(visible=False),  # Get more button
+        gr.Dropdown(visible=True),  # Kind of item dropdown (visible in order)
+        gr.Dropdown(visible=True),  # Size dropdown (visible in order)
+        gr.Dropdown(visible=True),  # Color dropdown (visible in order)
+        gr.Textbox(visible=True),  # Order Zip Code (visible in order)
+        gr.Textbox(visible=True),  # Order address textbox (visible in order)
+        gr.Button(visible=True),  # Back button (visible in order)
+        gr.Button(visible=True),  # Pay button (visible in order)
+        gr.Number(visible=True),  # Quantity number input (visible in order)
+        gr.Markdown(visible=False),  # Generation title markdown
+        gr.Markdown(visible=True),  # Order title markdown (visible in order)
+        gr.HTML(visible=False),  # Link output HTML
+        gr.Dropdown(visible=True),  # Order country dropdown (visible in order)
+        gr.Textbox(visible=True),  # Order first name textbox (visible in order)
+        gr.Textbox(visible=True),  # Order last name textbox (visible in order)
+        gr.Dropdown(visible=True),  # Order phone code dropdown (visible in order)
+        gr.Textbox(visible=True)  # Order phone number textbox (visible in order)
+    )
 
 # change display to image generation
 def change_to_generation_display():
-    return gr.Textbox(visible=True), gr.Textbox(visible=True), gr.Dropdown(visible=True), gr.Dropdown(
-        visible=True), gr.Dropdown(visible=True), gr.Button(visible=True), gr.Button(visible=True), gr.Button(
-        visible=False), gr.Button(visible=True), gr.Label(visible=True), gr.Button(visible=True), gr.Dropdown(
-        visible=False), gr.Dropdown(visible=False), gr.Dropdown(visible=False), gr.Textbox(visible=False), gr.Button(
-        visible=False), gr.Button(visible=False), gr.Number(visible=False), gr.Markdown(visible=True), gr.Markdown(
-        visible=False), gr.HTML(visible=True), gr.Dropdown(visible=False), gr.Textbox(visible=False), gr.Textbox(
-        visible=False), gr.Dropdown(visible=False), gr.Textbox(visible=False)
-
+    return (
+        gr.Textbox(visible=True),  # Original prompt textbox (visible in generation)
+        gr.Textbox(visible=True),  # Negative prompt textbox (visible in generation)
+        gr.Dropdown(visible=True),  # Style dropdown (visible in generation)
+        gr.Dropdown(visible=True),  # Image ratio dropdown (visible in generation)
+        gr.Dropdown(visible=True),  # Image quality dropdown (visible in generation)
+        gr.Button(visible=True),  # Generate image button (visible in generation)
+        gr.Button(visible=True),  # Surprise me button (visible in generation)
+        gr.Button(visible=False),  # Show button
+        gr.Button(visible=True),  # Buy button (visible in generation)
+        gr.Label(visible=True),  # Prompts left label (visible in generation)
+        gr.Button(visible=True),  # Get more button (visible in generation)
+        gr.Dropdown(visible=False),  # Kind of item dropdown
+        gr.Dropdown(visible=False),  # Size dropdown
+        gr.Dropdown(visible=False),  # Color dropdown
+        gr.Textbox(visible=False),  # Order Zip Code
+        gr.Textbox(visible=False),  # Order address textbox
+        gr.Button(visible=False),  # Back button
+        gr.Button(visible=False),  # Pay button
+        gr.Number(visible=False),  # Quantity number input
+        gr.Markdown(visible=True),  # Generation title markdown (visible in generation)
+        gr.Markdown(visible=False),  # Order title markdown
+        gr.HTML(visible=True),  # Link output HTML (visible in generation)
+        gr.Dropdown(visible=False),  # Order country dropdown
+        gr.Textbox(visible=False),  # Order first name textbox
+        gr.Textbox(visible=False),  # Order last name textbox
+        gr.Dropdown(visible=False),  # Order phone code dropdown
+        gr.Textbox(visible=False)  # Order phone number textbox
+    )
 
 # Logic to add more prompts when "Get more" is clicked
 def add_prompts(session_state):
@@ -304,8 +346,9 @@ with gr.Blocks(theme='Taithrah/Minimal') as demo:
             order_last_name = gr.Textbox(label="Last Name", placeholder="Your last name", interactive=True, visible=False)
         with gr.Row():
             order_phone_code = gr.Dropdown(label="Phone Code", value=country_phone_codes_map_list[country_en_name_list.index('Sweden')], choices=country_phone_codes_map_list, interactive=True, visible=False)
-            order_phone_number = gr.Textbox(label="Phone Number", placeholder="Your phone number", interactive=True,
-                                        visible=False)
+            order_phone_number = gr.Textbox(label="Phone Number", placeholder="Your phone number", interactive=True, visible=False)
+            order_zip = gr.Textbox(label="Zip Code", placeholder="Enter your zip code", interactive=True, visible=False)
+            
         order_address = gr.Textbox(label="Your address", placeholder="somewhere you want to receive the package",
                                    interactive=True, visible=False)
     with gr.Row():
@@ -338,7 +381,7 @@ with gr.Blocks(theme='Taithrah/Minimal') as demo:
         fn=change_to_order_display,
         inputs=[],
         outputs=[prompt, negative_prompt, style, ratio, quality, generate_btn, surprise_btn, show_btn, buy_btn,
-                 prompts_left, get_more, kind, size, color, order_address, pay_btn, back_btn, quantity,
+                 prompts_left, get_more, kind, size, color, order_zip, order_address, pay_btn, back_btn, quantity,
                  generation_title,
                  order_title, link_output, order_country, order_first_name, order_last_name, order_phone_code, order_phone_number]
     )
@@ -347,7 +390,7 @@ with gr.Blocks(theme='Taithrah/Minimal') as demo:
         fn=change_to_generation_display,
         inputs=[],
         outputs=[prompt, negative_prompt, style, ratio, quality, generate_btn, surprise_btn, show_btn, buy_btn,
-                 prompts_left, get_more, kind, size, color, order_address, pay_btn, back_btn, quantity,
+                 prompts_left, get_more, kind, size, color, order_zip, order_address, pay_btn, back_btn, quantity,
                  generation_title,
                  order_title, link_output, order_country, order_first_name, order_last_name, order_phone_code, order_phone_number]
     )
