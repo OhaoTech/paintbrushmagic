@@ -105,7 +105,13 @@ def init_db():
                 address TEXT NOT NULL,
                 payment_status INTEGER NOT NULL DEFAULT 0,
                 create_date datetime,
-                pay_date datetime
+                pay_date datetime,
+                country TEXT NOT NULL, 
+                first_name TEXT NOT NULL, 
+                last_name TEXT NOT NULL, 
+                phone_code TEXT NOT NULL, 
+                phone_number INTEGER NOT NULL, 
+                zip_code TEXT NOT NULL
             )
         """)
     conn.execute("""
@@ -117,7 +123,13 @@ def init_db():
                     address TEXT NOT NULL,
                     payment_status INTEGER NOT NULL DEFAULT 0,
                     create_date datetime,
-                    pay_date datetime
+                    pay_date datetime,
+                    country TEXT NOT NULL, 
+                    first_name TEXT NOT NULL, 
+                    last_name TEXT NOT NULL, 
+                    phone_code TEXT NOT NULL, 
+                    phone_number INTEGER NOT NULL, 
+                    zip_code TEXT NOT NULL
                 )
             """)
     conn.execute("""
@@ -129,7 +141,13 @@ def init_db():
                     address TEXT NOT NULL,
                     payment_status INTEGER NOT NULL DEFAULT 0,
                     create_date datetime,
-                    pay_date datetime
+                    pay_date datetime,
+                    country TEXT NOT NULL, 
+                    first_name TEXT NOT NULL, 
+                    last_name TEXT NOT NULL, 
+                    phone_code TEXT NOT NULL, 
+                    phone_number INTEGER NOT NULL, 
+                    zip_code TEXT NOT NULL
                 )
             """)
     conn.commit()
@@ -265,6 +283,12 @@ def generate_order():
     size = data['size']
     quantity = data['quantity']
     address = data['address']
+    country = data['country']
+    first_name = data['first_name']
+    last_name = data['last_name']
+    phone_code = data['phone_code']
+    phone_number = data['phone_number']
+    zip_code = data['zip_code']
 
     # if get database last insert id maybe occur concurrent problem, so use snowflake generate order id
     order_id = next(gen)
@@ -272,16 +296,18 @@ def generate_order():
     if kind == 'hoodie':
         color = data['color']
         conn.execute(
-            'INSERT INTO clothe_order (id, image_url, color, size, quantity, address, create_date) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            (order_id, image_url, color, size, quantity, address, datetime.now()))
+            'INSERT INTO clothe_order (id, image_url, color, size, quantity, address, create_date, country, first_name, last_name, phone_code, phone_number, zip_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            (order_id, image_url, color, size, quantity, address, datetime.now(), country, first_name, last_name, phone_code, phone_number, zip_code))
         conn.commit()
     elif kind == 'canvas':
-        conn.execute('INSERT INTO canvas_order (id, image_url, size, quantity, address, create_date) VALUES (?, ?, ?, ?, ?, ?)',
-                     (order_id, image_url, size, quantity, address, datetime.now()))
+        conn.execute(
+            'INSERT INTO canvas_order (id, image_url, size, quantity, address, create_date, country, first_name, last_name, phone_code, phone_number, zip_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            (order_id, image_url, size, quantity, address, datetime.now(), country, first_name, last_name, phone_code, phone_number, zip_code))
         conn.commit()
     elif kind == 'poster':
-        conn.execute('INSERT INTO poster_order (id, image_url, size, quantity, address, create_date) VALUES (?, ?, ?, ?, ?, ?)',
-                     (order_id, image_url, size, quantity, address, datetime.now()))
+        conn.execute(
+            'INSERT INTO poster_order (id, image_url, size, quantity, address, create_date, country, first_name, last_name, phone_code, phone_number, zip_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            (order_id, image_url, size, quantity, address, datetime.now(), country, first_name, last_name, phone_code, phone_number, zip_code))
         conn.commit()
     else:
         conn.close()
