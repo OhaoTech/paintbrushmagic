@@ -1,3 +1,4 @@
+import json
 import webbrowser
 
 import gradio as gr
@@ -65,80 +66,53 @@ def generate_prompt(prompt, negative_prompt, style):
 
 
 def record_image_and_prompt(prompt, image_url, style, ratio):
-    param = {
+    params = {
         'url': image_url,
         'prompt': prompt,
         'style': style,
         'ratio': ratio
     }
-
-    response = requests.post(IMAGE_SERVER_DOMAIN + '/add_image_record', json=param)
+    response = requests.post(f"{IMAGE_SERVER_DOMAIN}/add_image_record", json=params)
     if response.status_code != 200:
-        # TODO: when image generation record save failed
-        raise None
-    else:
-        # TODO: when image generation record save successfully
-        param = response.json()
-        local_url = param['local_url']
-        return local_url
+        raise Exception(f"Failed to record image and prompt: {response.text}")
+    local_url = response.json().get('local_url')
+    if not local_url:
+        raise Exception("Failed to retrieve the local URL from response")
+    return local_url
+
 
 
 def generate_image(prompt, negative_prompt, style, ratio, quality):
-    # Check the number of prompts left by making a request to the Flask backend
-    response = requests.get(IMAGE_SERVER_DOMAIN + '/get_prompts')
-    if response.status_code != 200:
-        return None, "Error retrieving prompt count.", ""
-    num_prompts = response.json()['prompts_left']
+    try:
+        response = requests.get(f"{IMAGE_SERVER_DOMAIN}/get_prompts")
+        response.raise_for_status()
+        num_prompts = response.json().get('prompts_left', 0)
 
-    if num_prompts > 0:
-        try:
-            if ratio == "1:1":
-                size = sizes[0]
-            elif ratio == "4:7":
-                size = sizes[1]
-            elif ratio == "7:4":
-                size = sizes[2]
-            else:
-                return None, "Wrong ratio", ""
+        if num_prompts <= 0:
+            return None, "You have no prompts left.", ""
 
-            # Add the style to the prompt
-            full_prompt = generate_prompt(prompt, negative_prompt, style)
-            # Call the OpenAI API
-            response = client.images.generate(
-                model="dall-e-3",
-                prompt=full_prompt,
-                size=size,
-                quality=quality,
-                n=1,
-            )
-            # The response should contain the URL to the generated image
-            image_url = response.data[0].url
-            # Get the binary image data from the URL
-            img_binary_data = requests.get(image_url).content
-            img = Image.open(io.BytesIO(img_binary_data))
+        size_mapping = {"1:1": sizes[0], "4:7": sizes[1], "7:4": sizes[2]}
+        size = size_mapping.get(ratio)
+        if not size:
+            return None, "Invalid ratio specified.", ""
 
-            # Record image url and prompt
-            local_url = record_image_and_prompt(full_prompt, image_url, style, ratio)
+        full_prompt = generate_prompt(prompt, negative_prompt, style)
+        response = client.images.generate(model="dall-e-3", prompt=full_prompt, size=size, quality=quality, n=1)
+        image_url = response.data[0].url
+        img_binary_data = requests.get(image_url).content
+        img = Image.open(io.BytesIO(img_binary_data))
 
-            if local_url is None:
-                # TODO: when record failed
-                pass
-            else:
-                image_url = local_url
+        local_url = record_image_and_prompt(full_prompt, image_url, style, ratio)
+        image_url = local_url if local_url else image_url  # fallback to original URL if local URL fails
 
-            # After successfully generating an image, update the prompt count by sending a POST request
-            update_response = requests.post(IMAGE_SERVER_DOMAIN + '/update_prompts')
-            if update_response.status_code == 200:
-                num_prompts -= 1  # Decrement the prompt count after the update
-            else:
-                return None, "Error updating prompt count.", ""
+        requests.post(f"{IMAGE_SERVER_DOMAIN}/update_prompts")  # Assuming this always succeeds
+        num_prompts -= 1
+        return img, f"You have {num_prompts} prompts left", image_url
 
-            return img, f"You have {num_prompts} prompts left", image_url
-
-        except Exception as e:
-            return None, f"An error occurred: {e}", ""
-    else:
-        return None, "You have no prompts left.", ""
+    except requests.RequestException as e:
+        return None, f"Network error: {e}", ""
+    except Exception as e:
+        return None, f"An error occurred: {e}", ""
 
 
 def surprise_me():
@@ -263,100 +237,73 @@ def change_size_dropdown(kind):
         return gr.Dropdown(label="Size", choices=poster_size, value=poster_size[0], interactive=True), gr.Dropdown(
             visible=False)
 
+#####################
+def validate_order_details(**order_details):
+    # Validate required fields are present and non-empty
+    required_fields = ['order_address', 'order_country', 'order_first_name', 
+                       'order_last_name', 'order_phone_code', 'order_phone_number', 'order_zip']
+    missing_fields = [field for field in required_fields if not order_details.get(field)]
+    if missing_fields:
+        return False, f"You need to finish the order information: {', '.join(missing_fields)}"
+    return True, ""
+
+def generate_order_data(kind, **kwargs):
+    # Initialize order data with common attributes
+    order_data = {k: v for k, v in kwargs.items() if k in [
+        'image_url', 'size', 'color', 'quantity', 'address', 'country', 
+        'first_name', 'last_name', 'phone_code', 'phone_number', 'zip_code']}
+    order_data['kind'] = kind
+    return order_data
+
+def post_order(order_data):
+    response = requests.post(f"{IMAGE_SERVER_DOMAIN}/generate_order", json=order_data)
+    if response.status_code != 200 or response.json().get('status') == "error":
+        error_message = response.json().get('message', 'An unknown error occurred.')
+        return None, f"Failed to generate order: {error_message}"
+    return response.json()['order_id'], None
 
 def generate_order(image_url, kind, size, color, quantity, order_address, order_country, order_first_name,
                    order_last_name, order_phone_code, order_phone_number, order_zip):
-    if (order_address is None
-            or order_address == ''
-            or order_country is None
-            or order_country == ''
-            or order_first_name is None
-            or order_first_name == ''
-            or order_last_name is None
-            or order_last_name == ''
-            or order_phone_code is None
-            or order_phone_code == ''
-            or order_phone_number is None
-            or order_phone_number == ''
-            or order_zip is None
-            or order_zip == ''):
-        # TODO reminder.html
-        return "You need to finish the order information!", STRIPE_REDIRECT_HTML_TEMPLATE.format(ILLEGAL_PAYMENT_HTML, BUTTON_ICON)
+    # Validate order details
+    valid, message = validate_order_details(
+        order_address=order_address, order_country=order_country, order_first_name=order_first_name,
+        order_last_name=order_last_name, order_phone_code=order_phone_code, 
+        order_phone_number=order_phone_number, order_zip=order_zip
+    )
+    if not valid:
+        return message, STRIPE_REDIRECT_HTML_TEMPLATE.format(ILLEGAL_PAYMENT_HTML, BUTTON_ICON)
 
-    if kind == 'hoodie':
-        order_data = {
-            'kind': kind,
-            'image_url': image_url,
-            'size': size,
-            'color': color,
-            'quantity': quantity,
-            'address': order_address,
-            'country': order_country,
-            'first_name': order_first_name,
-            'last_name': order_last_name,
-            'phone_code': order_phone_code,
-            'phone_number': order_phone_number,
-            'zip_code': order_zip
-        }
-    elif kind == 'canvas':
-        order_data = {
-            'kind': kind,
-            'image_url': image_url,
-            'size': size,
-            'quantity': quantity,
-            'address': order_address,
-            'country': order_country,
-            'first_name': order_first_name,
-            'last_name': order_last_name,
-            'phone_code': order_phone_code,
-            'phone_number': order_phone_number,
-            'zip_code': order_zip
-        }
-    elif kind == 'poster':
-        order_data = {
-            'kind': kind,
-            'image_url': image_url,
-            'size': size,
-            'quantity': quantity,
-            'address': order_address,
-            'country': order_country,
-            'first_name': order_first_name,
-            'last_name': order_last_name,
-            'phone_code': order_phone_code,
-            'phone_number': order_phone_number,
-            'zip_code': order_zip
-        }
+    # Generate order data
+    order_data = generate_order_data(kind, image_url=image_url, size=size, color=color, quantity=quantity, 
+                                     address=order_address, country=order_country, first_name=order_first_name, 
+                                     last_name=order_last_name, phone_code=order_phone_code, 
+                                     phone_number=order_phone_number, zip_code=order_zip)
 
-    response = requests.post(IMAGE_SERVER_DOMAIN + '/generate_order', json=order_data)
+    # Post order and handle response
+    order_id, error = post_order(order_data)
+    if error:
+        return error, STRIPE_REDIRECT_HTML_TEMPLATE.format(ILLEGAL_PAYMENT_HTML, BUTTON_ICON)
 
-    if response.status_code == 200:
-        data = response.json()
-        status = data['status']
-        if status == "error":
-            # TODO: if status is error, how to do
-            print(data['message'])
-            pass
-        else:
-            order_id = data['order_id']
-            url = create_checkout_session(order_id, kind, quantity)
-
-    # TODO: after getting the order id, we should redirect to pay page
+    # Create checkout session and redirect to payment page
+    url = create_checkout_session(order_id, kind, quantity)
     return 'You can pay it now!', STRIPE_REDIRECT_HTML_TEMPLATE.format(url, BUTTON_ICON)
 
-
 def create_checkout_session(order_id, kind, quantity):
-    data = {'order_id': order_id, 'kind': kind, 'quantity': quantity}
-    response = requests.get(IMAGE_SERVER_DOMAIN + '/create-checkout-session', json=data)
-    if response.status_code == 200:
-        data = response.json()
-        status = data['status']
-        if status == "error":
-            # let user know there is an error happened
-            print(data['message'])
-            pass
-        else:
-            url = data['url']
-            return url
+    session_data = {'order_id': order_id, 'kind': kind, 'quantity': quantity}
+    response = requests.post(f"{IMAGE_SERVER_DOMAIN}/create-checkout-session", json=session_data)
+    try:
+        response.raise_for_status()  # Will raise an HTTPError if the HTTP request returned an unsuccessful status code
+        return response.json()['url']
+    except requests.HTTPError as e:
+        error_message = f"HTTP error occurred: {e}"
+    except requests.RequestException as e:
+        error_message = f"Network error occurred: {e}"
+    except json.JSONDecodeError:
+        error_message = "Response content is not valid JSON"
+    
+    # Default error message if none of the above exceptions are caught
+    error_message = error_message or "An unknown error occurred"
+    return f"Error creating payment session: {error_message}"
 
 
 # Create the Gradio interface

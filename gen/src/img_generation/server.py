@@ -404,8 +404,7 @@ def generate_checkout_item(kind, quantity=1, currency='usd', price=999):
     }
     return item
 
-
-@app.route('/create-checkout-session', methods=['GET'])
+@app.route('/create-checkout-session', methods=['POST'])
 def create_checkout_session():
     try:
         data = request.get_json()
@@ -428,11 +427,9 @@ def create_checkout_session():
             success_url=IMAGE_SERVER_DOMAIN + '/success.html',
             cancel_url=IMAGE_SERVER_DOMAIN + '/cancel.html',
         )
-        print(checkout_session.id)
+        return {'status': 'success', 'url': checkout_session.url}
     except Exception as e:
-        return {"status": "error", "message": "There are some errors occurred: " + str(e)}
-
-    return {'status': 'success', 'url': checkout_session.url}
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @app.route('/download-image', methods=['POST'])
