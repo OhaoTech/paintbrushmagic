@@ -17,15 +17,16 @@ dotenv.load_dotenv("../../.env")
 
 prompt_free_times = os.getenv("PROMPT_FREE_TIMES")
 FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY")
-IMAGE_SERVER_DOMAIN = os.getenv("IMAGE_SERVER_DOMAIN")
+SERVER_IP = os.getenv("SERVER_IP")
 HOST_IP = os.getenv("HOST_IP")
 MODE = os.getenv('MODE', 'server')
 
 if MODE == 'local':
-    IMAGE_SERVER_DOMAIN = "http://127.0.0.1:5000"
     HOST_IP = '127.0.0.1'
+    IMAGE_SERVER_DOMAIN = f"http://{HOST_IP}:5000"
     # Any other configurations that need to be set for local mode
-
+else:
+    IMAGE_SERVER_DOMAIN = f"http://{SERVER_IP}:5000"
 stripe.api_key = os.getenv("STRIPE_API_KEY")
 # If you are testing your webhook locally with the Stripe CLI you
 # can find the endpoint's secret by running `stripe listen`
@@ -424,8 +425,8 @@ def create_checkout_session():
                 'order_id': order_id,
                 'kind': kind
             },
-            success_url=IMAGE_SERVER_DOMAIN + '/success.html',
-            cancel_url=IMAGE_SERVER_DOMAIN + '/cancel.html',
+            success_url=IMAGE_SERVER_DOMAIN + '/public/success.html',
+            cancel_url=IMAGE_SERVER_DOMAIN + '/public/cancel.html',
         )
         return {'status': 'success', 'url': checkout_session.url}
     except Exception as e:

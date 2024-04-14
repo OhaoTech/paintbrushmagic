@@ -238,13 +238,38 @@ def change_size_dropdown(kind):
             visible=False)
 
 #####################
+def humanize_field_name(field_name):
+    """Converts a field name from snake_case to Title Case without 'Order' and replaces underscores with spaces."""
+    # Remove 'order_' prefix and replace underscores with spaces
+    return ' '.join(word.title() for word in field_name.replace('order_', '').split('_')).title()
+
 def validate_order_details(**order_details):
-    # Validate required fields are present and non-empty
-    required_fields = ['order_address', 'order_country', 'order_first_name', 
-                       'order_last_name', 'order_phone_code', 'order_phone_number', 'order_zip']
-    missing_fields = [field for field in required_fields if not order_details.get(field)]
+    # Define human-readable field names that correspond to the form labels.
+    readable_field_names = {
+        'order_country': 'Country/Region',
+        'order_first_name': 'First Name',
+        'order_last_name': 'Last Name',
+        'order_phone_code': 'Phone Code',
+        'order_phone_number': 'Phone Number',
+        'order_zip': 'Zip Code',
+        'order_address': 'Address'
+    }
+
+    # Validate required fields are present and non-empty.
+    missing_fields = [
+        humanize_field_name(field) for field in readable_field_names
+        if not order_details.get(field)
+    ]
+
     if missing_fields:
-        return False, f"You need to finish the order information: {', '.join(missing_fields)}"
+        # Format the list of missing fields into a human-readable string.
+        if len(missing_fields) > 1:
+            formatted_fields = ', '.join(missing_fields[:-1]) + ', and ' + missing_fields[-1]
+        else:
+            formatted_fields = missing_fields[0]
+        
+        return False, f"Please complete the following information: {formatted_fields}"
+
     return True, ""
 
 def generate_order_data(kind, **kwargs):
