@@ -360,6 +360,7 @@ def create_checkout_session(order_id, kind, quantity):
 
 
 # Create the Gradio interface
+with gr.Blocks(theme='Taithrah/Minimal') as demo:
     generation_title = gr.Markdown("<h1>Create your AI art</h1>", visible=True)
     order_title = gr.Markdown("<h1>Check your order</h1>", visible=False)
 
@@ -539,3 +540,4 @@ def create_checkout_session(order_id, kind, quantity):
     )
 
 # Launch the Gradio interface
+demo.launch(server_name=HOST_IP, share=False, server_port=GRADIO_SERVER_PORT)
