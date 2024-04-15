@@ -7,6 +7,7 @@ import requests, io, os, dotenv
 from PIL import Image
 import random, prompt
 import country_info
+import currency_info
 
 # Load the environment variables from the .env file
 dotenv.load_dotenv()
@@ -47,9 +48,9 @@ qualities = ["standard", "hd"]
 
 # variants about order generation
 kind_list = ['hoodie', 'canvas', 'poster']
-hoodie_size = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
-canvas_size = ['20x25', '30x40', '40x50', '60x80']
-poster_size = ['A1', 'A2', 'A3']
+hoodie_size = ['S', 'M', 'L', 'XL']
+canvas_size = ['12x16', '16x16', '18x24']
+poster_size = ['12x16', '16x16', '18x24', '24x36']
 color_list = ['white', 'red', 'green', 'blue', 'black']
 country_en_name_list = country_info.country_en_name_list
 country_phone_codes_map_list = country_info.country_phone_codes_map_list
@@ -80,7 +81,6 @@ def record_image_and_prompt(prompt, image_url, style, ratio):
     if not local_url:
         raise Exception("Failed to retrieve the local URL from response")
     return local_url
-
 
 
 def generate_image(prompt, negative_prompt, style, ratio, quality):
@@ -178,7 +178,9 @@ def change_to_order_display():
         gr.Textbox(visible=True),  # Order phone number textbox (visible in order)
         gr.Button(visible=True),  # Place Order button (visible in order)
         gr.HTML(visible=True),  # stripe pay link
-        gr.Label(visible=True)  # address tip
+        gr.Label(visible=True),  # address tip
+        gr.Dropdown(visible=True),  # Currency dropdown
+        gr.Label(visible=True),  # Price tip
     )
 
 
@@ -213,7 +215,9 @@ def change_to_generation_display():
         gr.Textbox(visible=False),  # Order phone number textbox
         gr.Button(visible=False),  # Place Order button
         gr.HTML(visible=False),  # stripe pay link
-        gr.Label(visible=False)  # address tip
+        gr.Label(visible=False),  # address tip
+        gr.Dropdown(visible=False),  # Currency dropdown
+        gr.Label(visible=False),  # Price tip
     )
 
 
@@ -230,7 +234,7 @@ def add_prompts(session_state):
 
 def change_size_dropdown(kind):
     if kind == 'hoodie':
-        return gr.Dropdown(label="Size", choices=hoodie_size, value='M'), gr.Dropdown(interactive=True, visible=True)
+        return gr.Dropdown(label="Size", choices=hoodie_size, value=hoodie_size[0]), gr.Dropdown(interactive=True, visible=True)
     elif kind == 'canvas':
         return gr.Dropdown(label="Size(cm)", choices=canvas_size, value=canvas_size[0], interactive=True), gr.Dropdown(
             visible=False)
@@ -253,7 +257,8 @@ def validate_order_details(**order_details):
         'order_phone_code': 'Phone Code',
         'order_phone_number': 'Phone Number',
         'order_zip': 'Zip Code',
-        'order_address': 'Address'
+        'order_address': 'Address',
+        'order_currency': 'Currency'
     }
 
     # Validate required fields are present and non-empty.
@@ -277,7 +282,7 @@ def generate_order_data(kind, **kwargs):
     # Initialize order data with common attributes
     order_data = {k: v for k, v in kwargs.items() if k in [
         'image_url', 'size', 'color', 'quantity', 'address', 'country', 
-        'first_name', 'last_name', 'phone_code', 'phone_number', 'zip_code']}
+        'first_name', 'last_name', 'phone_code', 'phone_number', 'zip_code', 'currency']}
     order_data['kind'] = kind
     return order_data
 
@@ -285,37 +290,44 @@ def post_order(order_data):
     response = requests.post(f"{IMAGE_SERVER_DOMAIN}/generate_order", json=order_data)
     if response.status_code != 200 or response.json().get('status') == "error":
         error_message = response.json().get('message', 'An unknown error occurred.')
-        return None, f"Failed to generate order: {error_message}"
-    return response.json()['order_id'], None
+        return None, f"Failed to generate order: {error_message}", 'Something went wrong. Please try again later.'
+    data = response.json()
+    order_id = data['order_id']
+    price = data['price']
+    return order_id, None, price
 
 def generate_order(image_url, kind, size, color, quantity, order_address, order_country, order_first_name,
-                   order_last_name, order_phone_code, order_phone_number, order_zip):
+                   order_last_name, order_phone_code, order_phone_number, order_zip, order_currency):
     # Validate order details
     valid, message = validate_order_details(
         order_address=order_address, order_country=order_country, order_first_name=order_first_name,
         order_last_name=order_last_name, order_phone_code=order_phone_code, 
-        order_phone_number=order_phone_number, order_zip=order_zip
+        order_phone_number=order_phone_number, order_zip=order_zip, order_currency=order_currency
     )
     if not valid:
-        return message, STRIPE_REDIRECT_HTML_TEMPLATE.format(ILLEGAL_PAYMENT_HTML, CHECKOUT_BUTTON_ICON)
+        return message, STRIPE_REDIRECT_HTML_TEMPLATE.format(ILLEGAL_PAYMENT_HTML, CHECKOUT_BUTTON_ICON), "Something went wrong. Please try again later."
 
     # Generate order data
     order_data = generate_order_data(kind, image_url=image_url, size=size, color=color, quantity=quantity, 
                                      address=order_address, country=order_country, first_name=order_first_name, 
                                      last_name=order_last_name, phone_code=order_phone_code, 
-                                     phone_number=order_phone_number, zip_code=order_zip)
+                                     phone_number=order_phone_number, zip_code=order_zip, currency=order_currency)
 
     # Post order and handle response
-    order_id, error = post_order(order_data)
+    order_id, error, price = post_order(order_data)
     if error:
-        return error, STRIPE_REDIRECT_HTML_TEMPLATE.format(ILLEGAL_PAYMENT_HTML, CHECKOUT_BUTTON_ICON)
+        return error, STRIPE_REDIRECT_HTML_TEMPLATE.format(ILLEGAL_PAYMENT_HTML, CHECKOUT_BUTTON_ICON), "Something went wrong. Please try again later."
 
+    order_data['price'] = price
+    if type(price) is float or type(price) is int:
+        currency_symbol = currency_info.currency_symbol_map[order_currency]
+        price = f"{currency_symbol} {price/100:.2f}"
     # Create checkout session and redirect to payment page
-    url = create_checkout_session(order_id, kind, quantity)
-    return 'You can pay it now!', STRIPE_REDIRECT_HTML_TEMPLATE.format(url, CHECKOUT_BUTTON_ICON)
+    url = create_checkout_session(order_id, kind, order_data)
+    return 'You can pay it now!', STRIPE_REDIRECT_HTML_TEMPLATE.format(url, CHECKOUT_BUTTON_ICON), price
 
-def create_checkout_session(order_id, kind, quantity):
-    session_data = {'order_id': order_id, 'kind': kind, 'quantity': quantity}
+def create_checkout_session(order_id, kind, order_data):
+    session_data = {'order_id': order_id, 'kind': kind, 'order_data': order_data}
     response = requests.post(f"{IMAGE_SERVER_DOMAIN}/create-checkout-session", json=session_data)
     try:
         response.raise_for_status()  # Will raise an HTTPError if the HTTP request returned an unsuccessful status code
@@ -385,14 +397,19 @@ with gr.Blocks(theme='Taithrah/Minimal') as demo:
             order_phone_number = gr.Textbox(label="Phone Number", placeholder="Your phone number", interactive=True,
                                             visible=False)
             order_zip = gr.Textbox(label="Zip Code", placeholder="Enter your zip code", interactive=True, visible=False)
+            order_currency = gr.Dropdown(label="Currency", choices=currency_info.currency_simple_name_list, value='USD', interactive=True,
+                                         visible=False)
 
         order_address = gr.Textbox(label="Your address", placeholder="somewhere you want to receive the package",
                                    interactive=True, visible=False)
     with gr.Row():
-        addressTip = gr.Label(visible=False)
+        addressTip = gr.Label(value='Please fill the table!', visible=False)
     with gr.Row():
         back_btn = gr.Button("Back to generation page", visible=False)
         place_order_btn = gr.Button("Place Order", visible=False)
+
+    with gr.Row():
+        priceTip = gr.Label(label='Price', value='Click the place order button first.', visible=False)
         jump_to_payment_img_btn = gr.HTML(
             f"<a href={ILLEGAL_PAYMENT_HTML} target='_blank'><img src={CHECKOUT_BUTTON_ICON} alt='Click Me' style='width:100%; height:auto;'></a>",
             visible=False)
@@ -424,7 +441,7 @@ with gr.Blocks(theme='Taithrah/Minimal') as demo:
                  prompts_left, get_more, kind, size, color, order_zip, order_address, back_btn, quantity,
                  generation_title,
                  order_title, link_output, order_country, order_first_name, order_last_name, order_phone_code,
-                 order_phone_number, place_order_btn, jump_to_payment_img_btn, addressTip]
+                 order_phone_number, place_order_btn, jump_to_payment_img_btn, addressTip, order_currency, priceTip]
     )
 
     back_btn.click(
@@ -434,15 +451,15 @@ with gr.Blocks(theme='Taithrah/Minimal') as demo:
                  prompts_left, get_more, kind, size, color, order_zip, order_address, back_btn, quantity,
                  generation_title,
                  order_title, link_output, order_country, order_first_name, order_last_name, order_phone_code,
-                 order_phone_number,  place_order_btn, jump_to_payment_img_btn, addressTip]
+                 order_phone_number, place_order_btn, jump_to_payment_img_btn, addressTip, order_currency, priceTip]
     )
     
     place_order_btn.click(
         fn=generate_order,
         inputs=[image_url, kind, size, color, quantity, order_address, 
                 order_country, order_first_name, order_last_name,
-                order_phone_code, order_phone_number, order_zip],
-        outputs=[addressTip, jump_to_payment_img_btn]
+                order_phone_code, order_phone_number, order_zip, order_currency],
+        outputs=[addressTip, jump_to_payment_img_btn, priceTip]
     )
 
     get_more.click(
@@ -455,13 +472,6 @@ with gr.Blocks(theme='Taithrah/Minimal') as demo:
         fn=change_size_dropdown,
         inputs=[kind],
         outputs=[size, color]
-    )
-
-    kind.change(
-        fn=generate_order,
-        inputs=[image_url, kind, size, color, quantity, order_address, order_country, order_first_name, order_last_name,
-                order_phone_code, order_phone_number, order_zip],
-        outputs=[addressTip, jump_to_payment_img_btn]
     )
     
     # order_country.change( #todo: currency varies by country

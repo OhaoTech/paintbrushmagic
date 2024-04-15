@@ -119,7 +119,8 @@ def init_db():
                 last_name TEXT NOT NULL, 
                 phone_code TEXT NOT NULL, 
                 phone_number INTEGER NOT NULL, 
-                zip_code TEXT NOT NULL
+                zip_code TEXT NOT NULL,
+                price DECIMAL(10, 2) NOT NULL
             )
         """)
     conn.execute("""
@@ -137,7 +138,8 @@ def init_db():
                     last_name TEXT NOT NULL, 
                     phone_code TEXT NOT NULL, 
                     phone_number INTEGER NOT NULL, 
-                    zip_code TEXT NOT NULL
+                    zip_code TEXT NOT NULL,
+                    price DECIMAL(10, 2) NOT NULL
                 )
             """)
     conn.execute("""
@@ -155,7 +157,8 @@ def init_db():
                     last_name TEXT NOT NULL, 
                     phone_code TEXT NOT NULL, 
                     phone_number INTEGER NOT NULL, 
-                    zip_code TEXT NOT NULL
+                    zip_code TEXT NOT NULL,
+                    price DECIMAL(10, 2) NOT NULL
                 )
             """)
     conn.commit()
@@ -298,34 +301,36 @@ def generate_order():
     phone_number = data['phone_number']
     zip_code = data['zip_code']
 
+    price = _calculate_price(data)
+
     # if get database last insert id maybe occur concurrent problem, so use snowflake generate order id
     order_id = next(gen)
     conn = get_db_connection(ORDER_DATABASE_FILE)
     if kind == 'hoodie':
         color = data['color']
         conn.execute(
-            'INSERT INTO clothe_order (id, image_url, color, size, quantity, address, create_date, country, first_name, last_name, phone_code, phone_number, zip_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO clothe_order (id, image_url, color, size, quantity, address, create_date, country, first_name, last_name, phone_code, phone_number, zip_code, price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             (order_id, image_url, color, size, quantity, address, datetime.now(), country, first_name, last_name,
-             phone_code, phone_number, zip_code))
+             phone_code, phone_number, zip_code, price))
         conn.commit()
     elif kind == 'canvas':
         conn.execute(
-            'INSERT INTO canvas_order (id, image_url, size, quantity, address, create_date, country, first_name, last_name, phone_code, phone_number, zip_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO canvas_order (id, image_url, size, quantity, address, create_date, country, first_name, last_name, phone_code, phone_number, zip_code, price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             (order_id, image_url, size, quantity, address, datetime.now(), country, first_name, last_name, phone_code,
-             phone_number, zip_code))
+             phone_number, zip_code, price))
         conn.commit()
     elif kind == 'poster':
         conn.execute(
-            'INSERT INTO poster_order (id, image_url, size, quantity, address, create_date, country, first_name, last_name, phone_code, phone_number, zip_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO poster_order (id, image_url, size, quantity, address, create_date, country, first_name, last_name, phone_code, phone_number, zip_code, price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             (order_id, image_url, size, quantity, address, datetime.now(), country, first_name, last_name, phone_code,
-             phone_number, zip_code))
+             phone_number, zip_code, price))
         conn.commit()
     else:
         conn.close()
         return {"status": "error", "message": "There is no kind of order to " + kind}
 
     conn.close()
-    return {"status": "success", "order_id": str(order_id), 'kind': kind}
+    return {"status": "success", "order_id": str(order_id), 'kind': kind, 'price': price}
 
 
 @app.route('/update_clothe_order_payment_status', methods=['POST'])
@@ -406,7 +411,26 @@ def webhook():
     return jsonify({"status": "success"})
 
 
-def generate_checkout_item(kind, quantity=1, currency='usd', price=999):
+def _calculate_price(order_data):
+    kind = order_data['kind']
+    currency = order_data['currency']
+    size = order_data['size']
+    try:
+        price_item = json.load(open('price.json'))[kind]
+        for item in price_item:
+            if item['size'] == size:
+                unit_price = item[currency]
+                return unit_price * order_data['quantity']
+    except Exception as e:
+        print(e)
+
+    return None
+
+
+def generate_checkout_item(kind, order_data):
+    price = order_data['price']
+    currency = order_data['currency']
+    quantity = order_data['quantity']
     item = {
         'price_data': {
             'currency': currency,
@@ -425,12 +449,12 @@ def create_checkout_session():
     try:
         data = request.get_json()
         kind = data['kind']
-        quantity = data['quantity']
         order_id = data['order_id']
+        order_data = data['order_data']
 
         # TODO: customer buy multi products
         items = []
-        item = generate_checkout_item(kind=kind, quantity=quantity)
+        item = generate_checkout_item(kind=kind, order_data=order_data)
         items.append(item)
 
         checkout_session = stripe.checkout.Session.create(
@@ -445,6 +469,7 @@ def create_checkout_session():
         )
         return {'status': 'success', 'url': checkout_session.url}
     except Exception as e:
+        print(e)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
