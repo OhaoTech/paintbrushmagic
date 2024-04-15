@@ -3,23 +3,24 @@ body {
   justify-content: center;
   align-items: center;
   background: #242d60; /* A dark color typical of a cyberpunk theme */
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
-  'Helvetica Neue', 'Ubuntu', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Ubuntu', sans-serif;
   height: 100vh;
   margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
 section {
   background: #2a2c46;
   display: flex;
   flex-direction: column;
-  width: 400px;
-  height: auto;
-  padding: 20px; 
+  width: 90%; /* Responsive width */
+  max-width: 400px; /* Maximum width */
+  padding: 20px;
   border-radius: 6px;
   justify-content: space-between;
   box-shadow: 0 4px 15px rgba(128, 0, 128, 0.75); /* Purple glow for cyberpunk feel */
+  margin: 10px; /* Add some margin around the section */
 }
 .product {
   display: flex;
@@ -81,4 +82,46 @@ button {
 button:hover {
   background: #ae66ff; /* Lighter purple for hover effect */
   opacity: 0.5;
+}
+html {
+  font-size: 16px; /* Base font size for larger screens */
+}
+@media (max-width: 768px) {
+  html {
+    font-size: 14px; /* Smaller base font size for mobile */
+  }
+
+  body {
+    padding: 4vw; /* Padding based on viewport width */
+  }
+
+  section {
+    width: 95vw; /* Section width based on viewport width */
+    padding: 4vw; /* Padding inside the section based on viewport width */
+    margin: 4vw auto; /* Margin based on viewport width */
+  }
+
+  p, h3, h5, button {
+    /* Use relative units based on the root font size */
+    font-size: 1rem; /* Adjusts size relative to the base font size */
+  }
+
+  button {
+    padding: 1rem; /* Button padding based on root font size */
+  }
+}
+
+/* Ensure that images and buttons scale well and are easily tappable on mobile */
+img {
+  max-width: 100%; /* Make sure images are not wider than their container */
+  height: auto; /* Maintain aspect ratio */
+}
+
+button {
+  min-height: 44px; /* Minimum tappable area */
+}
+
+/* Additional styles for better touch experience */
+button:active {
+  opacity: 0.7; /* Feedback when button is pressed */
 }
