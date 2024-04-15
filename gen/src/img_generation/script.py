@@ -26,10 +26,11 @@ if MODE == 'local':
     # Any other configurations that need to be set for local mode
 
 # Button and Links    
-BUTTON_ICON = "http://" + SERVER_IP + ":5000/public/button.png"
+CHECKOUT_BUTTON_ICON = "http://" + SERVER_IP + ":5000/public/CheckoutButton.png"
+PREVIEW_BUTTON_ICON = "http://" + SERVER_IP + ":5000/public/PreviewButton.png"
 ILLEGAL_PAYMENT_HTML = "http://" + SERVER_IP + ":5000/public/illegal_payment.html"
 BASE_REDIRECT_URL = f"http://{SERVER_IP}:5500" + "/render?image_url=http://" + SERVER_IP + f":5000/"
-STRIPE_REDIRECT_HTML_TEMPLATE = "<a href={} target='_blank'><img src={} alt='Click Me' style='width:10%; height:auto;'></a>"
+STRIPE_REDIRECT_HTML_TEMPLATE = "<a href={} target='_blank'><img src={} alt='Click Me' style='width:100%; height:auto;'></a>"
 
 random_prompt = prompt.read_prompt()
 
@@ -141,7 +142,7 @@ def generate(prompt, negative_prompt, style, size, quality, session_state):
 def jump_render_page(image_url):
     # This is the URL where the Node.js server will handle the GET request
     redirect_url = BASE_REDIRECT_URL + f"{image_url}"
-    image_button = f"<a href={redirect_url} target='_blank'><img src={BUTTON_ICON} alt='Click Me' style='width:20%; height:auto;'></a>"
+    image_button = f"<a href={redirect_url} target='_blank'><img src={PREVIEW_BUTTON_ICON} alt='Click Me' style='width:100%; height:auto;'></a>"
     # the appearance of the button
     return image_button
 
@@ -165,7 +166,6 @@ def change_to_order_display():
         gr.Dropdown(visible=True),  # Color dropdown (visible in order)
         gr.Textbox(visible=True),  # Order Zip Code (visible in order)
         gr.Textbox(visible=True),  # Order address textbox (visible in order)
-        gr.Button(visible=False),  # Pay button (visible in order)
         gr.Button(visible=True),  # Back button (visible in order)
         gr.Number(visible=True),  # Quantity number input (visible in order)
         gr.Markdown(visible=False),  # Generation title markdown
@@ -176,6 +176,7 @@ def change_to_order_display():
         gr.Textbox(visible=True),  # Order last name textbox (visible in order)
         gr.Dropdown(visible=True),  # Order phone code dropdown (visible in order)
         gr.Textbox(visible=True),  # Order phone number textbox (visible in order)
+        gr.Button(visible=True),  # Place Order button (visible in order)
         gr.HTML(visible=True),  # stripe pay link
         gr.Label(visible=True)  # address tip
     )
@@ -200,7 +201,6 @@ def change_to_generation_display():
         gr.Dropdown(visible=False),  # Color dropdown
         gr.Textbox(visible=False),  # Order Zip Code
         gr.Textbox(visible=False),  # Order address textbox
-        gr.Button(visible=False),  # Pay button
         gr.Button(visible=False),  # Back button
         gr.Number(visible=False),  # Quantity number input
         gr.Markdown(visible=True),  # Generation title markdown (visible in generation)
@@ -211,6 +211,7 @@ def change_to_generation_display():
         gr.Textbox(visible=False),  # Order last name textbox
         gr.Dropdown(visible=False),  # Order phone code dropdown
         gr.Textbox(visible=False),  # Order phone number textbox
+        gr.Button(visible=False),  # Place Order button
         gr.HTML(visible=False),  # stripe pay link
         gr.Label(visible=False)  # address tip
     )
@@ -296,7 +297,7 @@ def generate_order(image_url, kind, size, color, quantity, order_address, order_
         order_phone_number=order_phone_number, order_zip=order_zip
     )
     if not valid:
-        return message, STRIPE_REDIRECT_HTML_TEMPLATE.format(ILLEGAL_PAYMENT_HTML, BUTTON_ICON)
+        return message, STRIPE_REDIRECT_HTML_TEMPLATE.format(ILLEGAL_PAYMENT_HTML, CHECKOUT_BUTTON_ICON)
 
     # Generate order data
     order_data = generate_order_data(kind, image_url=image_url, size=size, color=color, quantity=quantity, 
@@ -307,11 +308,11 @@ def generate_order(image_url, kind, size, color, quantity, order_address, order_
     # Post order and handle response
     order_id, error = post_order(order_data)
     if error:
-        return error, STRIPE_REDIRECT_HTML_TEMPLATE.format(ILLEGAL_PAYMENT_HTML, BUTTON_ICON)
+        return error, STRIPE_REDIRECT_HTML_TEMPLATE.format(ILLEGAL_PAYMENT_HTML, CHECKOUT_BUTTON_ICON)
 
     # Create checkout session and redirect to payment page
     url = create_checkout_session(order_id, kind, quantity)
-    return 'You can pay it now!', STRIPE_REDIRECT_HTML_TEMPLATE.format(url, BUTTON_ICON)
+    return 'You can pay it now!', STRIPE_REDIRECT_HTML_TEMPLATE.format(url, CHECKOUT_BUTTON_ICON)
 
 def create_checkout_session(order_id, kind, quantity):
     session_data = {'order_id': order_id, 'kind': kind, 'quantity': quantity}
@@ -355,7 +356,7 @@ with gr.Blocks(theme='Taithrah/Minimal') as demo:
             label="Image url", visible=False)
         show_btn = gr.Button("Show it!", visible=False)
         link_output = gr.HTML(
-            f"<a href={BASE_REDIRECT_URL} target='_blank'><img src={BUTTON_ICON} alt='Click Me' style='width:10%; height:auto;'></a>")  # Use gr.HTML to render the link as clickable
+            f"<a href={BASE_REDIRECT_URL} target='_blank'><img src={PREVIEW_BUTTON_ICON} alt='Click Me' style='width:100%; height:auto;'></a>")  # Use gr.HTML to render the link as clickable
         buy_btn = gr.Button("Buy it!")
     prompts_left = gr.Label(get_prompts_left())
     get_more = gr.Button("Get more")
@@ -391,9 +392,9 @@ with gr.Blocks(theme='Taithrah/Minimal') as demo:
         addressTip = gr.Label(visible=False)
     with gr.Row():
         back_btn = gr.Button("Back to generation page", visible=False)
-        pay_btn = gr.Button("Pay it!", visible=False)
-        pay_link_redirect = gr.HTML(
-            f"<a href={ILLEGAL_PAYMENT_HTML} target='_blank'><img src={BUTTON_ICON} alt='Click Me' style='width:10%; height:auto;'></a>",
+        place_order_btn = gr.Button("Place Order", visible=False)
+        jump_to_payment_img_btn = gr.HTML(
+            f"<a href={ILLEGAL_PAYMENT_HTML} target='_blank'><img src={CHECKOUT_BUTTON_ICON} alt='Click Me' style='width:100%; height:auto;'></a>",
             visible=False)
 
     session_state = gr.State({})
@@ -420,20 +421,28 @@ with gr.Blocks(theme='Taithrah/Minimal') as demo:
         fn=change_to_order_display,
         inputs=[],
         outputs=[prompt, negative_prompt, style, ratio, quality, generate_btn, surprise_btn, show_btn, buy_btn,
-                 prompts_left, get_more, kind, size, color, order_zip, order_address, pay_btn, back_btn, quantity,
+                 prompts_left, get_more, kind, size, color, order_zip, order_address, back_btn, quantity,
                  generation_title,
                  order_title, link_output, order_country, order_first_name, order_last_name, order_phone_code,
-                 order_phone_number, pay_link_redirect, addressTip]
+                 order_phone_number, place_order_btn, jump_to_payment_img_btn, addressTip]
     )
 
     back_btn.click(
         fn=change_to_generation_display,
         inputs=[],
         outputs=[prompt, negative_prompt, style, ratio, quality, generate_btn, surprise_btn, show_btn, buy_btn,
-                 prompts_left, get_more, kind, size, color, order_zip, order_address, pay_btn, back_btn, quantity,
+                 prompts_left, get_more, kind, size, color, order_zip, order_address, back_btn, quantity,
                  generation_title,
                  order_title, link_output, order_country, order_first_name, order_last_name, order_phone_code,
-                 order_phone_number, pay_link_redirect, addressTip]
+                 order_phone_number,  place_order_btn, jump_to_payment_img_btn, addressTip]
+    )
+    
+    place_order_btn.click(
+        fn=generate_order,
+        inputs=[image_url, kind, size, color, quantity, order_address, 
+                order_country, order_first_name, order_last_name,
+                order_phone_code, order_phone_number, order_zip],
+        outputs=[addressTip, jump_to_payment_img_btn]
     )
 
     get_more.click(
@@ -448,68 +457,19 @@ with gr.Blocks(theme='Taithrah/Minimal') as demo:
         outputs=[size, color]
     )
 
-    pay_btn.click(
-        fn=generate_order,
-        inputs=[image_url, kind, size, color, quantity, order_address, order_country, order_first_name, order_last_name,
-                order_phone_code, order_phone_number, order_zip],
-        outputs=[addressTip, pay_link_redirect]
-    )
-
     kind.change(
         fn=generate_order,
         inputs=[image_url, kind, size, color, quantity, order_address, order_country, order_first_name, order_last_name,
                 order_phone_code, order_phone_number, order_zip],
-        outputs=[addressTip, pay_link_redirect]
+        outputs=[addressTip, jump_to_payment_img_btn]
     )
-
-    order_address.change(
-        fn=generate_order,
-        inputs=[image_url, kind, size, color, quantity, order_address, order_country, order_first_name, order_last_name,
-                order_phone_code, order_phone_number, order_zip],
-        outputs=[addressTip, pay_link_redirect]
-    )
-
-    order_zip.change(
-        fn=generate_order,
-        inputs=[image_url, kind, size, color, quantity, order_address, order_country, order_first_name, order_last_name,
-                order_phone_code, order_phone_number, order_zip],
-        outputs=[addressTip, pay_link_redirect]
-    )
-
-    order_phone_number.change(
-        fn=generate_order,
-        inputs=[image_url, kind, size, color, quantity, order_address, order_country, order_first_name, order_last_name,
-                order_phone_code, order_phone_number, order_zip],
-        outputs=[addressTip, pay_link_redirect]
-    )
-
-    order_first_name.change(
-        fn=generate_order,
-        inputs=[image_url, kind, size, color, quantity, order_address, order_country, order_first_name, order_last_name,
-                order_phone_code, order_phone_number, order_zip],
-        outputs=[addressTip, pay_link_redirect]
-    )
-
-    order_last_name.change(
-        fn=generate_order,
-        inputs=[image_url, kind, size, color, quantity, order_address, order_country, order_first_name, order_last_name,
-                order_phone_code, order_phone_number, order_zip],
-        outputs=[addressTip, pay_link_redirect]
-    )
-
-    order_phone_code.change(
-        fn=generate_order,
-        inputs=[image_url, kind, size, color, quantity, order_address, order_country, order_first_name, order_last_name,
-                order_phone_code, order_phone_number, order_zip],
-        outputs=[addressTip, pay_link_redirect]
-    )
-
-    order_country.change(
-        fn=generate_order,
-        inputs=[image_url, kind, size, color, quantity, order_address, order_country, order_first_name, order_last_name,
-                order_phone_code, order_phone_number, order_zip],
-        outputs=[addressTip, pay_link_redirect]
-    )
+    
+    # order_country.change( #todo: currency varies by country
+    #     fn=generate_order,
+    #     inputs=[image_url, kind, size, color, quantity, order_address, order_country, order_first_name, order_last_name,
+    #             order_phone_code, order_phone_number, order_zip],
+    #     outputs=[addressTip, jump_to_payment_img_btn]
+    # )
 
 # Launch the Gradio interface
 demo.launch(server_name=HOST_IP, share=False, server_port=GRADIO_SERVER_PORT)
