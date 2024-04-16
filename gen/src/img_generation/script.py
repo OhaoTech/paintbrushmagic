@@ -345,9 +345,9 @@ def create_checkout_session(order_id, kind, order_data):
 
 
 # Create the Gradio interface
-with gr.Blocks(theme='Taithrah/Minimal') as demo:
-    generation_title = gr.Markdown("<h1>Create your AI art</h1>", visible=True)
-    order_title = gr.Markdown("<h1>Check your order</h1>", visible=False)
+with gr.Blocks(theme='Taithrah/Minimal', title="Paintbrush Magic - AI Art Generator") as demo:
+    generation_title = gr.Markdown("# [Paintbrush Magic](https://www.paintbrushmagic.com): Create your AI art", visible=True)
+    order_title = gr.Markdown("# [Paintbrush Magic](https://www.paintbrushmagic.com): Check your order", visible=False)
 
     with gr.Row():
         prompt = gr.Textbox(placeholder="A bunny in a spacesuit", label="Describe your image")

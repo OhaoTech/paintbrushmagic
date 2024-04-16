@@ -385,6 +385,8 @@ def webhook():
 
     payload = request.data
     sig_header = request.headers['Stripe-Signature']
+    if not sig_header:
+        return '', 400
     # second we need verify Signature
     try:
         event = stripe.Webhook.construct_event(
@@ -392,19 +394,23 @@ def webhook():
         )
     except ValueError as e:
         print('Error parsing payload: {}'.format(str(e)))
-        return '', 400
+        return 'Error parsing payload', 400
     except stripe.error.SignatureVerificationError as e:
         print('Error verifying webhook signature: {}'.format(str(e)))
-        return '', 400
+        return 'Error verifying webhook signature', 400
 
-    data = request.get_json()
-    if event.type == 'checkout.session.completed':
-        obj = data['data']['object']
-        metadata = obj['metadata']
-        order_id = metadata['order_id']
-        kind = metadata['kind']
-        if not idempotent_Order(order_id, kind):
-            return 'duplicate message', 400
+    if event['type'] == 'checkout.session.completed':
+        payment_intent = event['data']['object']  # The Stripe payment intent object
+        metadata = payment_intent['metadata']
+        order_id = metadata.get('order_id')
+        kind = metadata.get('kind')        
+
+        if not order_id or not kind:
+            return jsonify({"status": "error", "message": "Missing metadata in payment"}), 400
+
+        if not idempotent_Order(order_id, kind):  # Implement this function to check for duplicate processing
+            return jsonify({"status": "error", "message": "Duplicate message"}), 400
+
         update_order_status(order_id, kind)
         # TODO notify admin to send product
 
@@ -416,7 +422,7 @@ def _calculate_price(order_data):
     currency = order_data['currency']
     size = order_data['size']
     try:
-        price_item = json.load(open('price.json'))[kind]
+        price_item = json.load(open('public/price.json'))[kind]
         for item in price_item:
             if item['size'] == size:
                 unit_price = item[currency]
@@ -453,13 +459,28 @@ def create_checkout_session():
         order_data = data['order_data']
 
         # TODO: customer buy multi products
-        items = []
-        item = generate_checkout_item(kind=kind, order_data=order_data)
-        items.append(item)
-
+        items = [generate_checkout_item(kind=data['kind'], order_data=data['order_data'])]
+        
+        custom_fields = [
+            {"name": "Order ID", "value": order_id},
+            {"name": "Item Details", "value": f"{order_data.get('size', '')} size, {order_data.get('color', '')} color"},
+            {"name": "Contact", "value": f"{order_data.get('phone_code', '')} {order_data.get('phone_number', '')}"},
+            {"name": "Price", "value": str(items[0]['price_data']['unit_amount']) + ' ' + items[0]['price_data']['currency']}
+        ]
+                    
+        
         checkout_session = stripe.checkout.Session.create(
             line_items=items,
             mode='payment',
+            invoice_creation={
+                "enabled": True,
+                "invoice_data": {
+                    "description": f"Invoice for {order_data['size']} size {order_data['color']} {kind}",
+                    "metadata": order_data,  # Pass order_data as metadata
+                    "custom_fields": custom_fields,
+                    "footer": "Thank you for your purchase!",
+                }
+            },
             metadata={
                 'order_id': order_id,
                 'kind': kind
