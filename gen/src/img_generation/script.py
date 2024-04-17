@@ -350,7 +350,7 @@ with gr.Blocks(theme='Taithrah/Minimal', title="Paintbrush Magic - AI Art Genera
     order_title = gr.Markdown("# [Paintbrush Magic](https://www.paintbrushmagic.com): Check your order", visible=False)
 
     with gr.Row():
-        prompt = gr.Textbox(placeholder="A bunny in a spacesuit", label="Describe your image")
+        prompt = gr.Textbox(placeholder="eg. A cute badger in the forest", label="Describe your image(Prompt)")
     with gr.Row():
         negative_prompt = gr.Textbox(placeholder="unwanted themes or characteristics",
                                      label="Something you don't like (Optional)")
