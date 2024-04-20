@@ -494,4 +494,4 @@ with gr.Blocks(theme='Taithrah/Minimal', title="Paintbrush Magic - AI Art Genera
     # )
 
 # Launch the Gradio interface
-demo.launch(server_name=HOST_IP, share=False, server_port=GRADIO_SERVER_PORT)
+demo.launch(server_name=HOST_IP, share=False, server_port=GRADIO_SERVER_PORT, root_path="/ai")
