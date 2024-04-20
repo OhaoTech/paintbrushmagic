@@ -19,19 +19,31 @@ HOST_IP = os.getenv('HOST_IP')
 GRADIO_SERVER_PORT = int(os.getenv('GRADIO_SERVER_PORT'))
 RENDER_SERVER_DOMAIN = os.getenv('RENDER_SERVER_DOMAIN')
 MODE = os.getenv('MODE', 'server')
+DOMAIN_NAME = os.getenv('DOMAIN_NAME','')
 
 if MODE == 'local':
     IMAGE_SERVER_DOMAIN = "http://127.0.0.1:5000"
     HOST_IP = '127.0.0.1'
     SERVER_IP = '127.0.0.1'
-    # Any other configurations that need to be set for local mode
-
 # Button and Links    
-CHECKOUT_BUTTON_ICON = "http://" + SERVER_IP + ":5000/public/CheckoutButton.png"
-PREVIEW_BUTTON_ICON = "http://" + SERVER_IP + ":5000/public/PreviewButton.png"
-ILLEGAL_PAYMENT_HTML = "http://" + SERVER_IP + ":5000/public/illegal_payment.html"
-BASE_REDIRECT_URL = f"http://{SERVER_IP}:5500" + "/render?image_url=http://" + SERVER_IP + f":5000/"
+    CHECKOUT_BUTTON_ICON = "http://" + SERVER_IP + ":5000/public/CheckoutButton.png"
+    PREVIEW_BUTTON_ICON = "http://" + SERVER_IP + ":5000/public/PreviewButton.png"
+    ILLEGAL_PAYMENT_HTML = "http://" + SERVER_IP + ":5000/public/illegal_payment.html"
+    BASE_REDIRECT_URL = f"http://{SERVER_IP}:5500" + "/render?image_url=http://" + SERVER_IP + f":5000/"
+
+else:
+    if DOMAIN_NAME == '':
+        CHECKOUT_BUTTON_ICON = "http://" + SERVER_IP + ":5000/public/CheckoutButton.png"
+        PREVIEW_BUTTON_ICON = "http://" + SERVER_IP + ":5000/public/PreviewButton.png"
+        ILLEGAL_PAYMENT_HTML = "http://" + SERVER_IP + ":5000/public/illegal_payment.html"
+        BASE_REDIRECT_URL = f"http://{SERVER_IP}:5500" + "/render?image_url=http://" + SERVER_IP + f":5000/"
+    else:
+        CHECKOUT_BUTTON_ICON = f"https://{DOMAIN_NAME}/public/CheckoutButton.png"
+        PREVIEW_BUTTON_ICON = f"https://{DOMAIN_NAME}/public/PreviewButton.png"
+        ILLEGAL_PAYMENT_HTML = f"https://{DOMAIN_NAME}/public/illegal_payment.html"
+        BASE_REDIRECT_URL = f"https://{DOMAIN_NAME}/preview/render?image_url=https://ohao.tech/"
 STRIPE_REDIRECT_HTML_TEMPLATE = "<a href={} target='_blank'><img src={} alt='Click Me' style='width:100%; height:auto;'></a>"
+
 
 random_prompt = prompt.read_prompt()
 
