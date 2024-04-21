@@ -66,7 +66,7 @@ poster_size = ['12x16', '16x16', '18x24', '24x36']
 color_list = ['white', 'red', 'green', 'blue', 'black']
 country_en_name_list = country_info.country_en_name_list
 country_phone_codes_map_list = country_info.country_phone_codes_map_list
-
+original_link_output =  f"<a href={BASE_REDIRECT_URL} target='_blank'><img src={PREVIEW_BUTTON_ICON} alt='Click Me' style='width:100%; height:auto;'></a>"
 
 def generate_prompt(prompt, negative_prompt, style):
     if negative_prompt is None or negative_prompt == '':
@@ -102,7 +102,7 @@ def generate_image(prompt, negative_prompt, style, ratio, quality):
         num_prompts = response.json().get('prompts_left', 0)
 
         if num_prompts <= 0:
-            return None, "You have no prompts left.", ""
+            return None, "No prompt left. Tap \"Get more\" ", ""
 
         size_mapping = {"1:1": sizes[0], "4:7": sizes[1], "7:4": sizes[2]}
         size = size_mapping.get(ratio)
@@ -147,6 +147,9 @@ def get_prompts_left():
 
 # Define the event handler for the generate button
 def generate(prompt, negative_prompt, style, size, quality, session_state):
+    if not prompt:
+        error_message = "Don't leave prompt empty!"
+        return None, error_message, None, original_link_output
     img, message, image_url = generate_image(prompt, negative_prompt, style, size, quality)
     return img, message, image_url, jump_render_page(image_url)
 
@@ -357,7 +360,7 @@ def create_checkout_session(order_id, kind, order_data):
 
 
 # Create the Gradio interface
-with gr.Blocks(theme='Taithrah/Minimal', title="Paintbrush Magic - AI Art Generator") as demo:
+with gr.Blocks(theme='Taithrah/Minimal', title="Paintbrush Magic - AI Art Generator", css="footer{display:none !important}") as demo:
     generation_title = gr.Markdown("# [Paintbrush Magic](https://www.paintbrushmagic.com): Create your AI art", visible=True)
     order_title = gr.Markdown("# [Paintbrush Magic](https://www.paintbrushmagic.com): Check your order", visible=False)
 
@@ -379,9 +382,8 @@ with gr.Blocks(theme='Taithrah/Minimal', title="Paintbrush Magic - AI Art Genera
             "",
             label="Image url", visible=False)
         show_btn = gr.Button("Show it!", visible=False)
-        link_output = gr.HTML(
-            f"<a href={BASE_REDIRECT_URL} target='_blank'><img src={PREVIEW_BUTTON_ICON} alt='Click Me' style='width:100%; height:auto;'></a>")  # Use gr.HTML to render the link as clickable
-        buy_btn = gr.Button("Buy it!")
+        link_output = gr.HTML(original_link_output)  # Use gr.HTML to render the link as clickable
+        buy_btn = gr.Button("Customize Product")
     prompts_left = gr.Label(get_prompts_left())
     get_more = gr.Button("Get more")
     generated_prompt = gr.Textbox(label="Generated prompt", visible=False)

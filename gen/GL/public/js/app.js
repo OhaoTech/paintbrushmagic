@@ -182,7 +182,7 @@ function setBackground(imageFileName) {
     const textureLoader = new THREE.TextureLoader();
     textureLoader.load('assets/background/' + imageFileName, function (texture) {
         texture.mapping = THREE.EquirectangularReflectionMapping;
-        texture.encoding = THREE.sRGBEncoding;
+        texture.encoding = THREE.NoColorSpace;
 
         // Update the background
         scene.background = texture;
