@@ -1,0 +1,5 @@
+
+gen/src/img_generation/__pycache__/
+
+gen/.vscode/
+gen/src/img_generation/public/data/img/

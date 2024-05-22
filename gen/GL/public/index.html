@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Hoodie Texture Application</title>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+		#model-buttons {
+		  position: fixed;
+		  bottom: 10px;
+		  left: 10px;
+		  padding: 10px;
+		  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black background */
+		  border-radius: 8px; /* Optional: rounds the corners of the background */
+		  z-index: 1000; /* Ensure it's above other elements */
+		}
+
+		#model-buttons button {
+		  color: white; /* Text color */
+		  background: transparent; /* Button background */
+		  border: 1px solid white; /* White border */
+		  padding: 8px 16px; /* Padding inside the buttons */
+		  margin: 0 4px; /* Space between buttons */
+		  cursor: pointer; /* Cursor to indicate it's clickable */
+		}
+
+#model-buttons button:hover {
+  background-color: rgba(255, 255, 255, 0.25); /* Slightly more opaque on hover */
+}
+
+    </style>
+	<script type="importmap">
+		{
+		  "imports": {
+			"three": "https://unpkg.com/three@0.160.1/build/three.module.js",
+			"three/addons/": "https://unpkg.com/three@0.160.1/examples/jsm/"
+		  }
+		  
+		}
+	  </script>
+</head>
+<body>
+    <input type="file" id="fileInput" accept="image/*" style="position: absolute; z-index: 1;">
+
+    <script  type="module"  src="./js/app.js"></script> <!-- Link to your external JS file here -->
+	<div id="model-buttons" style="position: fixed; bottom: 10px; left: 10px; padding: 10px; background-color: rgba(0, 0, 0, 0.5);">
+		<button id="btnCanvas" onclick="toggleModel('canvas')">Canvas</button>
+		<button id="btnPoster" onclick="toggleModel('poster')">Poster</button>
+		<button id="btnHoodie" onclick="toggleModel('hoodie')">Hoodie</button>
+	  </div>
+</body>
+</html>
