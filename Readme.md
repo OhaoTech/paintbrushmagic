@@ -1,4 +1,5 @@
-
+**The project was suspended because of the lack of fundings.**
+***
 # Paintbrush Magic
 
 **Paintbrush Magic** is a web application for generating AI-based images and rendering them on various products like hoodies, canvases, and posters. The application is built using Three.js for rendering, Gradio and Flask for the frontend and backend.
